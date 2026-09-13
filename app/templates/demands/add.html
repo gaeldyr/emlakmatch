@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}Alıcım Var - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto space-y-4 pb-12">
+    <!-- Üst Başlık -->
+    <div class="flex items-center gap-3 pt-1 border-b border-slate-200/80 pb-2">
+        <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/dashboard';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div>
+            <h1 class="text-base font-black text-slate-900 tracking-tight">Alıcım Var</h1>
+            <p class="text-[11px] text-slate-500">Müşterinizin aradığı kriterleri girin, uygun mülkleri bulalım.</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form action="/demands/search" method="POST" class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-4">
+        
+        <!-- 1. BÖLGE (İL & İLÇE SEÇİMİ) -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">Aranan Bölge</label>
+            <div class="space-y-2">
+                <input type="hidden" name="il" id="realCityInput" value="İstanbul">
+                <input type="hidden" name="ilce" id="realDistrictInput" value="Beşiktaş">
+
+                <!-- İl Seçim Butonu -->
+                <div onclick="openLocationDrawer('city')" class="p-3 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs group flex items-center justify-between">
+                    <div>
+                        <span class="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">İl Seçimi</span>
+                        <span id="displayCityText" class="text-xs font-black text-slate-800 group-hover:theme-text-primary transition">İstanbul</span>
+                    </div>
+                    <span class="text-xs text-slate-400">▾</span>
+                </div>
+
+                <!-- İlçe Seçim Butonu -->
+                <div onclick="openLocationDrawer('district')" class="p-3 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs group flex items-center justify-between">
+                    <div>
+                        <span class="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">İlçe Seçimi</span>
+                        <span id="displayDistrictText" class="text-xs font-black text-slate-800 group-hover:theme-text-primary transition">Beşiktaş</span>
+                    </div>
+                    <span class="text-xs text-slate-400">▾</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. GAYRİMENKUL TİPİ -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">Gayrimenkul Tipi</label>
+            <input type="hidden" name="gayrimenkul_tipi" id="selectedType" value="Konut">
+            
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                <button type="button" onclick="selectType('Konut', this)" class="type-btn p-3 rounded-2xl border-2 theme-border-primary theme-bg-light theme-text-dark font-extrabold shadow-xs transition-all flex flex-col items-center justify-center gap-1.5">
+                    <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/></svg>
+                    <span class="text-[11px]">Konut</span>
+                </button>
+
+                <button type="button" onclick="selectType('Villa', this)" class="type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5">
+                    <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span class="text-[11px]">Villa</span>
+                </button>
+
+                <button type="button" onclick="selectType('Ticari', this)" class="type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5">
+                    <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/></svg>
+                    <span class="text-[11px]">Ticari</span>
+                </button>
+
+                <button type="button" onclick="selectType('Arsa', this)" class="type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5">
+                    <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
+                    <span class="text-[11px]">Arsa</span>
+                </button>
+
+                <button type="button" onclick="selectType('Diğer', this)" class="type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5 col-span-2">
+                    <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 12h6"/><path d="M12 9v6"/></svg>
+                    <span class="text-[11px]">Diğer (Bina, Tesis vb.)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. BÜTÇE ARALIĞI -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">Bütçe Aralığı (TL)</label>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="space-y-1">
+                    <input type="text" id="displayMinButce" placeholder="Min (örn: 10.000.000)" oninput="formatPriceField(this, 'realMinButce')" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:ring-2 focus:theme-border-primary focus:bg-white focus:outline-none shadow-2xs transition">
+                    <input type="hidden" name="min_butce" id="realMinButce" value="0">
+                </div>
+                <div class="space-y-1">
+                    <input type="text" id="displayMaxButce" placeholder="Max (örn: 25.000.000)" oninput="formatPriceField(this, 'realMaxButce')" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:ring-2 focus:theme-border-primary focus:bg-white focus:outline-none shadow-2xs transition">
+                    <input type="hidden" name="max_butce" id="realMaxButce" value="0">
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. ODA SAYISI -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">Oda Sayısı</label>
+            <input type="text" name="oda_sayisi" placeholder="Örn: 3+1, 4+1 veya 2+1" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:ring-2 focus:theme-border-primary focus:bg-white focus:outline-none shadow-2xs transition">
+        </div>
+
+        <!-- 5. 40 NİTELİK & DONATI SEÇİMİ -->
+        <div>
+            <div class="flex items-center justify-between mb-1.5">
+                <label class="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Aranan Nitelikler & Donatılar</label>
+                <span id="selectedFeatureBadge" class="text-[10px] font-extrabold theme-text-dark theme-bg-light px-2 py-0.5 rounded-md border theme-border-light">0 seçildi</span>
+            </div>
+            
+            <div id="hiddenFeaturesContainer"></div>
+
+            <div class="max-h-56 overflow-y-auto p-2.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3 text-xs custom-scrollbar">
+                <!-- 1. Site & Güvenlik (8) -->
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Site & Güvenlik</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for f in ["Site İçi", "7/24 Güvenlik", "Kamera Sistemi", "Kapalı Otopark", "Açık Otopark", "Vale Hizmeti", "Resepsiyon", "Kartlı Giriş"] %}
+                        <button type="button" onclick="toggleFeatureChip('{{ f }}', this)" class="demand-chip px-2.5 py-1 rounded-xl text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ {{ f }}</button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 2. Sosyal Alanlar & Spor (12) -->
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Sosyal Alanlar & Spor</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for f in ["Açık Havuz", "Kapalı Havuz", "Çocuk Havuzu", "Fitness / Spor Salonu", "Sauna", "Hamam", "SPA", "Tenis Kortu", "Basketbol Sahası", "Çocuk Oyun Parkı", "Yürüyüş Parkuru", "Kafeterya / Restoran"] %}
+                        <button type="button" onclick="toggleFeatureChip('{{ f }}', this)" class="demand-chip px-2.5 py-1 rounded-xl text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ {{ f }}</button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 3. Yapı & Konfor (12) -->
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Yapı & Konfor</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for f in ["Yerden Isıtma", "Merkezi Isıtma", "Kombi (Doğalgaz)", "Akıllı Ev Sistemi", "VRF / Klima", "Ankastre Mutfak", "Giyinme Odası", "Ebeveyn Banyosu", "Çamaşır Odası", "Geniş Balkon", "Teras", "Müstakil Bahçe"] %}
+                        <button type="button" onclick="toggleFeatureChip('{{ f }}', this)" class="demand-chip px-2.5 py-1 rounded-xl text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ {{ f }}</button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 4. Manzara & Konum (8) -->
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Manzara, Konum & Ulaşım</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for f in ["Deniz Manzarası", "Boğaz Manzarası", "Orman / Doğa Manzarası", "Şehir Manzarası", "Metroya Yakın", "Metrobüse Yakın", "Havalimanına Yakın", "Denize Sıfır"] %}
+                        <button type="button" onclick="toggleFeatureChip('{{ f }}', this)" class="demand-chip px-2.5 py-1 rounded-xl text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ {{ f }}</button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. MÜŞTERİ DURUMU -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">Müşteri Durumu</label>
+            <input type="hidden" name="musteri_durumu" id="selectedCustomerStatus" value="Hazır Alıcı">
+            
+            <div class="grid grid-cols-2 gap-2 text-xs font-bold">
+                <button type="button" onclick="selectCustomerStatus('Hazır Alıcı', this)" class="status-btn p-3 rounded-2xl border-2 theme-border-primary theme-bg-light theme-text-dark font-black shadow-xs transition-all">
+                    Hazır Alıcı
+                </button>
+                <button type="button" onclick="selectCustomerStatus('Araştırıyor', this)" class="status-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:theme-border-primary shadow-2xs transition-all">
+                    Araştırıyor
+                </button>
+            </div>
+        </div>
+
+        <!-- 7. GÖRÜNÜRLÜK DÜZEYİ (VISIBILITY SEÇİMİ) -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider mb-2">Talebin Görünürlük Alanı</label>
+            <input type="hidden" name="visibility" id="selectedVisibility" value="network">
+            
+            <div class="space-y-2 text-xs">
+                <div onclick="selectDemandVisibility('network', this)" class="demand-vis-card flex items-center justify-between p-3 theme-bg-light border-2 theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-4 h-4 rounded-full border-2 theme-border-primary flex items-center justify-center radio-circle">
+                            <div class="w-2 h-2 rounded-full theme-bg-primary dot"></div>
+                        </div>
+                        <div>
+                            <h4 class="font-extrabold text-slate-900">Tüm Ağ (Network)</h4>
+                            <p class="text-[10px] text-slate-500">Tüm emlak profesyonellerinin aktif portföyleri ve sıfır projelerle taranır.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div onclick="selectDemandVisibility('group', this)" class="demand-vis-card flex items-center justify-between p-3 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition shadow-2xs">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center radio-circle">
+                            <div class="w-2 h-2 rounded-full bg-transparent dot"></div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">Sadece Gruplarım</h4>
+                            <p class="text-[10px] text-slate-500">Yalnızca üye olduğunuz B2B gruplarındaki portföylerle eşleşir.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div onclick="selectDemandVisibility('private', this)" class="demand-vis-card flex items-center justify-between p-3 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition shadow-2xs">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center radio-circle">
+                            <div class="w-2 h-2 rounded-full bg-transparent dot"></div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">Gizli Talep (Private)</h4>
+                            <p class="text-[10px] text-slate-500">Ağa açılmaz, sadece şahsi müşteri havuzunuzda saklanır.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gönder / Ara Butonu -->
+        <button type="submit" class="w-full theme-bg-primary theme-hover-bg active:scale-[0.99] text-white font-black py-3.5 rounded-2xl text-xs transition shadow-md mt-2 flex items-center justify-center gap-1.5">
+            <span>Ağda Ara</span>
+            <span>›</span>
+        </button>
+    </form>
+</div>
+
+<!-- ================= MODERN ALTTAN AÇILIR KONUM ÇEKMECESİ ================= -->
+<div id="locationPickerDrawer" onclick="closeLocationDrawer()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="locationDrawerContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-3.5 shadow-2xl border-t theme-border-primary transform translate-y-full transition-transform duration-300 max-h-[80vh] flex flex-col justify-between">
+        
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto"></div>
+
+        <div>
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 id="locationDrawerTitle" class="text-xs font-black theme-text-dark uppercase tracking-tight">İl Seçiniz</h3>
+                <button type="button" onclick="closeLocationDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+            
+            <div class="mt-2.5">
+                <input type="text" id="drawerSearchInput" oninput="filterDrawerOptions()" placeholder="Listede ara..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:theme-border-primary shadow-2xs">
+            </div>
+        </div>
+
+        <div id="drawerOptionsList" class="flex-1 overflow-y-auto space-y-1.5 pr-1 py-1 custom-scrollbar"></div>
+
+        <button type="button" onclick="closeLocationDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition mt-2">
+            Vazgeç
+        </button>
+    </div>
+</div>
+
+<script id="turkeyDataJson" type="application/json">
+{{ turkey_data|tojson if turkey_data else '{}' }}
+</script>
+
+<script>
+    const rawDataEl = document.getElementById('turkeyDataJson');
+    let turkeyData = {};
+    try {
+        turkeyData = JSON.parse(rawDataEl.textContent || '{}');
+    } catch(e) {
+        turkeyData = { "İstanbul": ["Beşiktaş", "Beykoz", "Kadıköy", "Sarıyer"] };
+    }
+
+    let currentPickerMode = 'city';
+    let currentPool = [];
+
+    function openLocationDrawer(mode) {
+        currentPickerMode = mode;
+        const titleEl = document.getElementById('locationDrawerTitle');
+        const searchInput = document.getElementById('drawerSearchInput');
+        searchInput.value = '';
+
+        const collator = new Intl.Collator('tr');
+
+        if (mode === 'city') {
+            titleEl.innerText = 'İl Seçiniz';
+            currentPool = Object.keys(turkeyData).sort(collator.compare);
+        } else {
+            const selectedCity = document.getElementById('realCityInput').value || 'İstanbul';
+            titleEl.innerText = `${selectedCity} - İlçe Seçiniz`;
+            const rawDistricts = turkeyData[selectedCity] || ["Merkez"];
+            currentPool = [...rawDistricts].sort(collator.compare);
+        }
+
+        renderDrawerOptions(currentPool);
+
+        const drawer = document.getElementById('locationPickerDrawer');
+        const content = document.getElementById('locationDrawerContent');
+        drawer.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeLocationDrawer() {
+        const drawer = document.getElementById('locationPickerDrawer');
+        const content = document.getElementById('locationDrawerContent');
+        drawer.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function renderDrawerOptions(items) {
+        const container = document.getElementById('drawerOptionsList');
+        container.innerHTML = '';
+
+        const currentActive = (currentPickerMode === 'city') 
+            ? document.getElementById('realCityInput').value 
+            : document.getElementById('realDistrictInput').value;
+
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-xs text-slate-400">Eşleşen sonuç bulunamadı.</div>';
+            return;
+        }
+
+        items.forEach(item => {
+            const isSelected = (item.trim().toLocaleLowerCase('tr') === currentActive.trim().toLocaleLowerCase('tr'));
+            const optBtn = document.createElement('button');
+            optBtn.type = 'button';
+            optBtn.onclick = () => selectLocationItem(item);
+
+            if (isSelected) {
+                optBtn.className = 'w-full flex items-center justify-between p-3.5 rounded-2xl theme-bg-primary text-white font-black text-xs transition shadow-xs';
+                optBtn.innerHTML = `<span>${item}</span><span class="text-sm">✓</span>`;
+            } else {
+                optBtn.className = 'w-full flex items-center justify-between p-3.5 rounded-2xl bg-white hover:theme-bg-light text-slate-800 hover:theme-text-dark border border-slate-200/80 font-bold text-xs transition shadow-2xs';
+                optBtn.innerHTML = `<span>${item}</span>`;
+            }
+
+            container.appendChild(optBtn);
+        });
+    }
+
+    function filterDrawerOptions() {
+        const query = document.getElementById('drawerSearchInput').value.trim().toLocaleLowerCase('tr');
+        const filtered = currentPool.filter(it => it.toLocaleLowerCase('tr').includes(query));
+        renderDrawerOptions(filtered);
+    }
+
+    function selectLocationItem(val) {
+        if (currentPickerMode === 'city') {
+            document.getElementById('realCityInput').value = val;
+            document.getElementById('displayCityText').innerText = val;
+
+            const availableDistricts = turkeyData[val] || ["Merkez"];
+            const defaultDistrict = availableDistricts[0];
+            document.getElementById('realDistrictInput').value = defaultDistrict;
+            document.getElementById('displayDistrictText').innerText = defaultDistrict;
+        } else {
+            document.getElementById('realDistrictInput').value = val;
+            document.getElementById('displayDistrictText').innerText = val;
+        }
+        closeLocationDrawer();
+    }
+
+    function selectType(typeName, btn) {
+        document.getElementById('selectedType').value = typeName;
+        document.querySelectorAll('.type-btn').forEach(b => {
+            b.className = 'type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5 ' + (b.classList.contains('col-span-2') ? 'col-span-2' : '');
+        });
+        btn.className = 'type-btn p-3 rounded-2xl border-2 theme-border-primary theme-bg-light theme-text-dark font-extrabold shadow-xs transition-all flex flex-col items-center justify-center gap-1.5 ' + (btn.classList.contains('col-span-2') ? 'col-span-2' : '');
+    }
+
+    function selectCustomerStatus(statusName, btn) {
+        document.getElementById('selectedCustomerStatus').value = statusName;
+        document.querySelectorAll('.status-btn').forEach(b => {
+            b.className = 'status-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:theme-border-primary shadow-2xs transition-all';
+        });
+        btn.className = 'status-btn p-3 rounded-2xl border-2 theme-border-primary theme-bg-light theme-text-dark font-extrabold shadow-xs transition-all';
+    }
+
+    function selectDemandVisibility(visType, card) {
+        document.getElementById('selectedVisibility').value = visType;
+        document.querySelectorAll('.demand-vis-card').forEach(c => {
+            c.className = 'demand-vis-card flex items-center justify-between p-3 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition shadow-2xs';
+            const circle = c.querySelector('.radio-circle');
+            const dot = c.querySelector('.dot');
+            circle.className = 'w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center radio-circle';
+            dot.className = 'w-2 h-2 rounded-full bg-transparent dot';
+        });
+
+        card.className = 'demand-vis-card flex items-center justify-between p-3 theme-bg-light border-2 theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs';
+        const circle = card.querySelector('.radio-circle');
+        const dot = card.querySelector('.dot');
+        circle.className = 'w-4 h-4 rounded-full border-2 theme-border-primary flex items-center justify-center radio-circle';
+        dot.className = 'w-2 h-2 rounded-full theme-bg-primary dot';
+    }
+
+    function formatPriceField(input, hiddenId) {
+        let rawVal = input.value.replace(/\D/g, '');
+        document.getElementById(hiddenId).value = rawVal || '0';
+        if (rawVal) {
+            input.value = Number(rawVal).toLocaleString('tr-TR');
+        } else {
+            input.value = '';
+        }
+    }
+
+    let selectedFeatures = [];
+
+    function toggleFeatureChip(feat, btn) {
+        const idx = selectedFeatures.indexOf(feat);
+        if (idx > -1) {
+            selectedFeatures.splice(idx, 1);
+            btn.className = 'demand-chip px-2.5 py-1 rounded-xl text-[10px] font-semibold border border-slate-200 bg-slate-50 text-slate-600 hover:theme-border-primary transition';
+            btn.innerText = `+ ${feat}`;
+        } else {
+            selectedFeatures.push(feat);
+            btn.className = 'demand-chip px-2.5 py-1 rounded-xl text-[10px] font-bold border-2 theme-border-primary theme-bg-light theme-text-dark transition shadow-2xs';
+            btn.innerText = `✓ ${feat}`;
+        }
+
+        const container = document.getElementById('hiddenFeaturesContainer');
+        container.innerHTML = '';
+        selectedFeatures.forEach(f => {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'ozellikler';
+            hiddenInput.value = f;
+            container.appendChild(hiddenInput);
+        });
+
+        document.getElementById('selectedFeatureBadge').innerText = `${selectedFeatures.length} seçildi`;
+    }
+</script>
+{% endblock %}

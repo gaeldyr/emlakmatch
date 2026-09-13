@@ -1,0 +1,623 @@
+{% extends "base.html" %}
+
+{% block title %}Portföyüm Var - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-[85vh] flex flex-col justify-between">
+    <div>
+        <!-- Üst Bar & Dinamik Geri Tuşu -->
+        <div class="flex items-center justify-between pb-2">
+            <button type="button" onclick="prevStep()" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+                <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6"/>
+                </svg>
+            </button>
+            <h1 class="text-sm font-extrabold text-slate-900 tracking-tight">Portföyüm Var</h1>
+            <div class="w-6"></div>
+        </div>
+
+        <!-- 1 - 2 - 3 Tıklanabilir Adım Göstergesi -->
+        <div class="flex items-center justify-center gap-3 py-3 border-b border-slate-100 mb-3">
+            <button type="button" onclick="goToStep(1)" id="badge-step-1" class="w-6 h-6 rounded-full theme-bg-primary text-white flex items-center justify-center text-xs font-bold transition shadow-xs">1</button>
+            <div id="line-1-2" class="w-8 h-0.5 bg-slate-200 transition-colors"></div>
+            <button type="button" onclick="goToStep(2)" id="badge-step-2" class="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xs font-bold transition">2</button>
+            <div id="line-2-3" class="w-8 h-0.5 bg-slate-200 transition-colors"></div>
+            <button type="button" onclick="goToStep(3)" id="badge-step-3" class="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xs font-bold transition">3</button>
+        </div>
+
+        <form id="portfolioForm" action="/portfolios/add" method="POST" enctype="multipart/form-data">
+            <!-- ================= ADIM 1: MÜLK BİLGİLERİ ================= -->
+            <div id="step-1" class="space-y-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5">Mülkün Bulunduğu Yer</label>
+                    <div class="space-y-2">
+                        <!-- Gizli Inputlar (Form gönderimi için) -->
+                        <input type="hidden" name="il" id="realCityInput" value="İstanbul">
+                        <input type="hidden" name="ilce" id="realDistrictInput" value="Beykoz">
+
+                        <!-- Özel Tasarım İl Seçim Butonu -->
+                        <div onclick="openLocationDrawer('city')" class="p-3 bg-white border border-slate-200 hover:theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs group">
+                            <span class="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">İl Seçimi</span>
+                            <span id="displayCityText" class="text-xs font-black text-slate-800 group-hover:theme-text-primary transition">İstanbul</span>
+                        </div>
+
+                        <!-- Özel Tasarım İlçe Seçim Butonu -->
+                        <div onclick="openLocationDrawer('district')" class="p-3 bg-white border border-slate-200 hover:theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs group">
+                            <span class="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">İlçe Seçimi</span>
+                            <span id="displayDistrictText" class="text-xs font-black text-slate-800 group-hover:theme-text-primary transition">Beykoz</span>
+                        </div>
+
+                        <input type="text" name="mahalle" placeholder="Mahalle / Site (Örn: Acarkent)" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs focus:ring-2 focus:theme-border-primary focus:outline-none shadow-2xs">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-2">Gayrimenkul Tipi</label>
+                    <input type="hidden" name="gayrimenkul_tipi" id="selectedType" value="Villa">
+                    
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                        <button type="button" onclick="selectType('Daire', this)" class="type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-500 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5">
+                            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                            <span class="text-[11px] font-bold">Daire</span>
+                        </button>
+
+                        <button type="button" onclick="selectType('Villa', this)" class="type-btn p-3 rounded-2xl border-2 theme-border-primary theme-bg-light theme-text-dark shadow-sm ring-2 ring-slate-900/5 transition-all flex flex-col items-center justify-center gap-1.5">
+                            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            <span class="text-[11px] font-bold">Villa</span>
+                        </button>
+
+                        <button type="button" onclick="selectType('Arsa', this)" class="type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-500 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5">
+                            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
+                            <span class="text-[11px] font-bold">Arsa</span>
+                        </button>
+
+                        <button type="button" onclick="selectType('İş Yeri', this)" class="type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-500 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5">
+                            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/></svg>
+                            <span class="text-[11px] font-bold">İş Yeri</span>
+                        </button>
+
+                        <button type="button" onclick="selectType('Diğer', this)" class="type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-500 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5 col-span-2">
+                            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 12h6"/><path d="M12 9v6"/></svg>
+                            <span class="text-[11px] font-bold">Diğer (Bina, Turistik vb.)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= ADIM 2: DETAY BİLGİLER & DONATILAR ================= -->
+            <div id="step-2" class="space-y-3.5 hidden">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Fiyat</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="formattedFiyatInput" placeholder="40.000.000" value="40.000.000" oninput="formatPriceInput(this)" class="flex-1 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:theme-border-primary focus:outline-none shadow-2xs">
+                        <input type="hidden" name="fiyat" id="realFiyatInput" value="40000000">
+                        <span class="px-3.5 py-2.5 bg-slate-100 rounded-xl text-xs font-bold text-slate-600 border border-slate-200">TL</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Oda Sayısı</label>
+                        <input type="text" name="oda" placeholder="Örn: 5+1" value="5+1" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:theme-border-primary focus:outline-none shadow-2xs">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">m² (Yaklaşık)</label>
+                        <input type="number" name="m2" placeholder="450" value="450" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:theme-border-primary focus:outline-none shadow-2xs">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-[11px] font-bold text-slate-600">Gayrimenkul Donatıları & Nitelikleri</label>
+                        <span id="selectedDonatiCount" class="text-[10px] font-bold theme-text-dark theme-bg-light px-2 py-0.5 rounded-md border theme-border-light">3 seçildi</span>
+                    </div>
+                    <input type="hidden" name="kisa_aciklama" id="portfolioFeaturesInput" value="Müstakil Bahçeli, Kapalı Otopark, Açık Yüzme Havuzu">
+                    
+                    <div class="max-h-48 overflow-y-auto p-2 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5 text-xs custom-scrollbar">
+                        <div>
+                            <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">İç Donanım</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" onclick="togglePortFeature('Ebeveyn Banyosu', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Ebeveyn Banyosu</button>
+                                <button type="button" onclick="togglePortFeature('Giyinme Odası', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Giyinme Odası</button>
+                                <button type="button" onclick="togglePortFeature('Akıllı Ev Altyapısı', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Akıllı Ev Altyapısı</button>
+                                <button type="button" onclick="togglePortFeature('Yerden Isıtma', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Yerden Isıtma</button>
+                                <button type="button" onclick="togglePortFeature('Ankastre Mutfak', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Ankastre Mutfak</button>
+                                <button type="button" onclick="togglePortFeature('Şömine', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Şömine</button>
+                                <button type="button" onclick="togglePortFeature('Jakuzi', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Jakuzi</button>
+                                <button type="button" onclick="togglePortFeature('Çamaşır Odası', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Çamaşır Odası</button>
+                                <button type="button" onclick="togglePortFeature('Kiler', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Kiler</button>
+                                <button type="button" onclick="togglePortFeature('Balkon / Teras', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Balkon / Teras</button>
+                                <button type="button" onclick="togglePortFeature('Çelik Kapı', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Çelik Kapı</button>
+                                <button type="button" onclick="togglePortFeature('Boyalı / Masrafsız', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Boyalı / Masrafsız</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Dış & Site Özellikleri</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" onclick="togglePortFeature('Açık Yüzme Havuzu', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border-2 theme-border-primary theme-bg-light theme-text-dark transition">✓ Açık Yüzme Havuzu</button>
+                                <button type="button" onclick="togglePortFeature('Kapalı Yüzme Havuzu', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Kapalı Yüzme Havuzu</button>
+                                <button type="button" onclick="togglePortFeature('Kapalı Otopark', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border-2 theme-border-primary theme-bg-light theme-text-dark transition">✓ Kapalı Otopark</button>
+                                <button type="button" onclick="togglePortFeature('Açık Otopark', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Açık Otopark</button>
+                                <button type="button" onclick="togglePortFeature('7/24 Güvenlik & Kamera', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ 7/24 Güvenlik & Kamera</button>
+                                <button type="button" onclick="togglePortFeature('Fitness / Spor Salonu', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Fitness / Spor Salonu</button>
+                                <button type="button" onclick="togglePortFeature('Sauna & Hamam', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Sauna & Hamam</button>
+                                <button type="button" onclick="togglePortFeature('Çocuk Oyun Parkı', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Çocuk Oyun Parkı</button>
+                                <button type="button" onclick="togglePortFeature('Asansör', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Asansör</button>
+                                <button type="button" onclick="togglePortFeature('Jeneratör', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Jeneratör</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Konum & Manzara</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" onclick="togglePortFeature('Deniz / Boğaz Manzarası', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Deniz / Boğaz Manzarası</button>
+                                <button type="button" onclick="togglePortFeature('Orman / Doğa Manzarası', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Orman / Doğa Manzarası</button>
+                                <button type="button" onclick="togglePortFeature('Şehir Manzarası', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Şehir Manzarası</button>
+                                <button type="button" onclick="togglePortFeature('Metroya / Toplu Taşımaya Yakın', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Metroya Yakın</button>
+                                <button type="button" onclick="togglePortFeature('Cadde Üzeri', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Cadde Üzeri</button>
+                                <button type="button" onclick="togglePortFeature('Denize Sıfır / Yürüme', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Denize Sıfır / Yürüme</button>
+                                <button type="button" onclick="togglePortFeature('AVM / Çarşıya Yakın', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ AVM'ye Yakın</button>
+                                <button type="button" onclick="togglePortFeature('Hastaneye Yakın', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Hastaneye Yakın</button>
+                                <button type="button" onclick="togglePortFeature('Okul / Koleje Yakın', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Okul / Koleje Yakın</button>
+                                <button type="button" onclick="togglePortFeature('Anayola Yakın', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Anayola Yakın</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Yapı & Hukuki Durum</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" onclick="togglePortFeature('Müstakil Bahçeli', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border-2 theme-border-primary theme-bg-light theme-text-dark transition">✓ Müstakil Bahçeli</button>
+                                <button type="button" onclick="togglePortFeature('Sıfır / Yeni Bina', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Sıfır / Yeni Bina</button>
+                                <button type="button" onclick="togglePortFeature('Krediye Uygun', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Krediye Uygun</button>
+                                <button type="button" onclick="togglePortFeature('Kat Mülkiyetli (İskanlı)', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Kat Mülkiyetli (İskanlı)</button>
+                                <button type="button" onclick="togglePortFeature('Güneydoğu Cephe', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Güneydoğu Cephe</button>
+                                <button type="button" onclick="togglePortFeature('Isı / Ses Yalıtımı', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Isı / Ses Yalıtımı</button>
+                                <button type="button" onclick="togglePortFeature('Deprem Yönetmeliğine Uygun', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Deprem Yönetmeliğine Uygun</button>
+                                <button type="button" onclick="togglePortFeature('Takasa Uygun', this)" class="port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition">+ Takasa Uygun</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fotoğraf Seçimi & Önizleme (Max 10) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-[11px] font-bold text-slate-600">Fotoğraf Yükle (Maksimum 10)</label>
+                        <span id="photoCountBadge" class="text-[10px] text-slate-500 font-bold">0 / 10 seçildi</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 flex-wrap" id="previewContainer">
+                        <input type="file" name="fotograflar" id="realFileInput" multiple accept="image/jpeg,image/png,image/jpg,image/webp" class="hidden">
+
+                        <label id="btnAddPhoto" class="w-16 h-16 rounded-xl border-2 border-dashed border-slate-300 hover:theme-border-primary flex flex-col items-center justify-center cursor-pointer bg-white transition shadow-2xs group">
+                            <span class="text-xl text-slate-400 group-hover:theme-text-primary font-bold leading-none">+</span>
+                            <span class="text-[9px] text-slate-400 font-semibold mt-1">Ekle</span>
+                            <input type="file" id="tempFileInput" multiple accept="image/jpeg,image/png,image/jpg,image/webp" onchange="handleFilesSelected(event)" class="hidden">
+                        </label>
+                    </div>
+                    <p id="limitWarning" class="text-[10px] text-amber-600 font-semibold mt-1 hidden">Maksimum 10 fotoğraf sınırına ulaşıldı.</p>
+                </div>
+            </div>
+
+            <!-- ================= ADIM 3: İŞBİRLİĞİ & GÖRÜNÜRLÜK (ORTAK SATIŞ PRENSİBİ) ================= -->
+            <div id="step-3" class="space-y-4 hidden">
+                <!-- Satış Yetki Beyanı -->
+                <div onclick="toggleYetki()" id="yetkiBox" class="p-3 theme-bg-light border-2 theme-border-primary rounded-xl flex items-center gap-3 cursor-pointer select-none transition-all shadow-2xs">
+                    <input type="checkbox" id="yetkiCheckbox" name="yetki_durumu" value="Satış Yetkili" checked class="hidden">
+                    <div id="yetkiCheckIcon" class="w-5 h-5 rounded theme-bg-primary text-white flex items-center justify-center text-xs font-bold transition">✓</div>
+                    <span id="yetkiText" class="text-xs font-bold theme-text-dark">Satış yetkim mevcut</span>
+                </div>
+
+                <!-- Ortak Satış Bilgilendirme Notu -->
+                <div class="p-3 bg-white border border-slate-200 rounded-2xl flex items-start gap-2.5 shadow-2xs">
+                    <div class="w-5 h-5 rounded-lg theme-bg-light theme-text-dark flex items-center justify-center shrink-0 mt-0.5">
+                        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <p class="text-[11px] text-slate-700 font-medium leading-relaxed">
+                        <strong class="font-extrabold text-slate-900">Ortak Satış Kuralı:</strong> Bu portföyde komisyon kırpması yoktur. Satıcıyı temsil eden kendi hizmet bedelini, alıcıyı getiren meslektaş ise kendi hizmet bedelini alır.
+                    </p>
+                </div>
+
+                <!-- Portföy Görünürlük Düzeyi -->
+                <div>
+                    <label class="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider mb-2">Görünürlük & Paylaşım Alanı</label>
+                    <input type="hidden" name="visibility" id="selectedVisibility" value="network">
+                    
+                    <div class="space-y-2 text-xs">
+                        <!-- 1. Tüm Ağ -->
+                        <div onclick="selectVisibility('network', this)" class="vis-card flex items-center justify-between p-3 theme-bg-light border-2 theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs">
+                            <div class="flex items-center gap-3">
+                                <div class="w-4 h-4 rounded-full border-2 theme-border-primary flex items-center justify-center radio-circle">
+                                    <div class="w-2 h-2 rounded-full theme-bg-primary dot"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-extrabold text-slate-900">Tüm Ağ (Network)</h4>
+                                    <p class="text-[10px] text-slate-500 font-medium">Ağdaki kriteri uyan tüm emlak profesyonelleri eşleşebilir.</p>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-black theme-text-dark theme-bg-light px-2 py-0.5 rounded-md border theme-border-light">Önerilen</span>
+                        </div>
+
+                        <!-- 2. Sadece Gruplarım -->
+                        <div onclick="selectVisibility('group', this)" class="vis-card flex items-center justify-between p-3 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition shadow-2xs">
+                            <div class="flex items-center gap-3">
+                                <div class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center radio-circle">
+                                    <div class="w-2 h-2 rounded-full bg-transparent dot"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800">Sadece Gruplarım</h4>
+                                    <p class="text-[10px] text-slate-500 font-medium">Yalnızca üye olduğunuz profesyonel emlakçı gruplarında paylaşılır.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Gizli / Özel Havuz -->
+                        <div onclick="selectVisibility('private', this)" class="vis-card flex items-center justify-between p-3 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition shadow-2xs">
+                            <div class="flex items-center gap-3">
+                                <div class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center radio-circle">
+                                    <div class="w-2 h-2 rounded-full bg-transparent dot"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800">Gizli Portföy (Private)</h4>
+                                    <p class="text-[10px] text-slate-500 font-medium">Ağa açılmaz, sadece sizin dijital portföy havuzunuzda saklanır.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ek Not -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Meslektaşlara Ek Not (Opsiyonel)</label>
+                    <textarea name="ek_not" rows="2" placeholder="Sunum koşulları, tapu durumu, randevu önceliği..." class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:theme-border-primary focus:outline-none shadow-2xs"></textarea>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Alt İleri / Gönder Butonu -->
+    <div class="pt-4 pb-2">
+        <button type="button" id="btnNext" onclick="nextStep()" class="w-full theme-bg-primary theme-hover-bg active:scale-[0.99] text-white font-bold py-3 rounded-xl text-sm transition shadow-sm">
+            Devam
+        </button>
+    </div>
+</div>
+
+<!-- ================= ALTTAN AÇILIR KONUM ÇEKMECESİ ================= -->
+<div id="locationPickerDrawer" onclick="closeLocationDrawer()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="locationDrawerContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-[#FAFDFB] rounded-t-3xl p-5 space-y-3.5 shadow-2xl border-t theme-border-primary transform translate-y-full transition-transform duration-300 max-h-[80vh] flex flex-col justify-between">
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto"></div>
+
+        <div>
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 id="locationDrawerTitle" class="text-xs font-black theme-text-dark uppercase tracking-tight">İl Seçiniz</h3>
+                <button type="button" onclick="closeLocationDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+            
+            <div class="mt-2.5">
+                <input type="text" id="drawerSearchInput" oninput="filterDrawerOptions()" placeholder="Listede ara..." class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:theme-border-primary shadow-2xs">
+            </div>
+        </div>
+
+        <div id="drawerOptionsList" class="flex-1 overflow-y-auto space-y-1.5 pr-1 py-1 custom-scrollbar"></div>
+
+        <button type="button" onclick="closeLocationDrawer()" class="w-full py-3 bg-slate-200/80 hover:bg-slate-300 text-slate-700 font-bold rounded-2xl text-xs transition mt-2">
+            Vazgeç
+        </button>
+    </div>
+</div>
+
+<script id="turkeyDataJson" type="application/json">
+{{ turkey_data|tojson if turkey_data else '{}' }}
+</script>
+
+<script>
+    const rawDataEl = document.getElementById('turkeyDataJson');
+    let turkeyData = {};
+    try {
+        turkeyData = JSON.parse(rawDataEl.textContent || '{}');
+    } catch(e) {
+        turkeyData = { "İstanbul": ["Beşiktaş", "Beykoz", "Kadıköy", "Sarıyer"] };
+    }
+
+    let currentPickerMode = 'city';
+    let currentPool = [];
+
+    function openLocationDrawer(mode) {
+        currentPickerMode = mode;
+        const titleEl = document.getElementById('locationDrawerTitle');
+        const searchInput = document.getElementById('drawerSearchInput');
+        searchInput.value = '';
+
+        const collator = new Intl.Collator('tr');
+
+        if (mode === 'city') {
+            titleEl.innerText = 'İl Seçiniz';
+            currentPool = Object.keys(turkeyData).sort(collator.compare);
+        } else {
+            const selectedCity = document.getElementById('realCityInput').value || 'İstanbul';
+            titleEl.innerText = `${selectedCity} - İlçe Seçiniz`;
+            const rawDistricts = turkeyData[selectedCity] || ["Merkez"];
+            currentPool = [...rawDistricts].sort(collator.compare);
+        }
+
+        renderDrawerOptions(currentPool);
+
+        const drawer = document.getElementById('locationPickerDrawer');
+        const content = document.getElementById('locationDrawerContent');
+        drawer.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeLocationDrawer() {
+        const drawer = document.getElementById('locationPickerDrawer');
+        const content = document.getElementById('locationDrawerContent');
+        drawer.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function renderDrawerOptions(items) {
+        const container = document.getElementById('drawerOptionsList');
+        container.innerHTML = '';
+
+        const currentActive = (currentPickerMode === 'city') 
+            ? document.getElementById('realCityInput').value 
+            : document.getElementById('realDistrictInput').value;
+
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-xs text-slate-400">Eşleşen sonuç bulunamadı.</div>';
+            return;
+        }
+
+        items.forEach(item => {
+            const isSelected = (item.trim().toLocaleLowerCase('tr') === currentActive.trim().toLocaleLowerCase('tr'));
+            const optBtn = document.createElement('button');
+            optBtn.type = 'button';
+            optBtn.onclick = () => selectLocationItem(item);
+
+            if (isSelected) {
+                optBtn.className = 'w-full flex items-center justify-between p-3.5 rounded-2xl theme-bg-primary text-white font-black text-xs transition shadow-xs';
+                optBtn.innerHTML = `<span>${item}</span><span class="text-sm">✓</span>`;
+            } else {
+                optBtn.className = 'w-full flex items-center justify-between p-3.5 rounded-2xl bg-white hover:theme-bg-light text-slate-800 hover:theme-text-dark border border-slate-200/80 font-bold text-xs transition shadow-2xs';
+                optBtn.innerHTML = `<span>${item}</span>`;
+            }
+
+            container.appendChild(optBtn);
+        });
+    }
+
+    function filterDrawerOptions() {
+        const query = document.getElementById('drawerSearchInput').value.trim().toLocaleLowerCase('tr');
+        const filtered = currentPool.filter(it => it.toLocaleLowerCase('tr').includes(query));
+        renderDrawerOptions(filtered);
+    }
+
+    function selectLocationItem(val) {
+        if (currentPickerMode === 'city') {
+            document.getElementById('realCityInput').value = val;
+            document.getElementById('displayCityText').innerText = val;
+
+            const availableDistricts = turkeyData[val] || ["Merkez"];
+            const defaultDistrict = availableDistricts[0];
+            document.getElementById('realDistrictInput').value = defaultDistrict;
+            document.getElementById('displayDistrictText').innerText = defaultDistrict;
+        } else {
+            document.getElementById('realDistrictInput').value = val;
+            document.getElementById('displayDistrictText').innerText = val;
+        }
+        closeLocationDrawer();
+    }
+
+    function selectType(typeName, btn) {
+        document.getElementById('selectedType').value = typeName;
+        document.querySelectorAll('.type-btn').forEach(b => {
+            b.className = 'type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-500 hover:theme-border-primary shadow-2xs transition-all flex flex-col items-center justify-center gap-1.5 ' + (b.classList.contains('col-span-2') ? 'col-span-2' : '');
+        });
+        btn.className = 'type-btn p-3 rounded-2xl border-2 theme-border-primary theme-bg-light theme-text-dark shadow-sm ring-2 ring-slate-900/5 transition-all flex flex-col items-center justify-center gap-1.5 ' + (btn.classList.contains('col-span-2') ? 'col-span-2' : '');
+    }
+
+    let portFeatures = ["Müstakil Bahçeli", "Kapalı Otopark", "Açık Yüzme Havuzu"];
+
+    function togglePortFeature(feat, btn) {
+        const idx = portFeatures.indexOf(feat);
+        if (idx > -1) {
+            portFeatures.splice(idx, 1);
+            btn.className = 'port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border border-slate-200 bg-white text-slate-600 hover:theme-border-primary transition';
+            btn.innerText = `+ ${feat}`;
+        } else {
+            portFeatures.push(feat);
+            btn.className = 'port-chip px-2 py-1 rounded-lg text-[10px] font-semibold border-2 theme-border-primary theme-bg-light theme-text-dark transition';
+            btn.innerText = `✓ ${feat}`;
+        }
+        document.getElementById('portfolioFeaturesInput').value = portFeatures.join(', ');
+        document.getElementById('selectedDonatiCount').innerText = `${portFeatures.length} seçildi`;
+    }
+
+    let selectedFilesPool = [];
+    const MAX_PHOTOS = 10;
+
+    function handleFilesSelected(event) {
+        const newFiles = Array.from(event.target.files);
+        if (!newFiles || newFiles.length === 0) return;
+
+        const remainingSlots = MAX_PHOTOS - selectedFilesPool.length;
+        if (remainingSlots <= 0) {
+            document.getElementById('limitWarning').classList.remove('hidden');
+            event.target.value = '';
+            return;
+        }
+
+        const filesToAdd = newFiles.slice(0, remainingSlots);
+        if (newFiles.length > remainingSlots) {
+            document.getElementById('limitWarning').classList.remove('hidden');
+        } else {
+            document.getElementById('limitWarning').classList.add('hidden');
+        }
+
+        selectedFilesPool = selectedFilesPool.concat(filesToAdd);
+        event.target.value = '';
+
+        syncRealFileInput();
+        renderPhotoPreviews();
+    }
+
+    function removePhoto(index) {
+        selectedFilesPool.splice(index, 1);
+        document.getElementById('limitWarning').classList.add('hidden');
+        syncRealFileInput();
+        renderPhotoPreviews();
+    }
+
+    function syncRealFileInput() {
+        const dataTransfer = new DataTransfer();
+        selectedFilesPool.forEach(file => dataTransfer.items.add(file));
+        document.getElementById('realFileInput').files = dataTransfer.files;
+
+        const countBadge = document.getElementById('photoCountBadge');
+        countBadge.innerText = `${selectedFilesPool.length} / ${MAX_PHOTOS} seçildi`;
+
+        const btnAdd = document.getElementById('btnAddPhoto');
+        if (selectedFilesPool.length >= MAX_PHOTOS) {
+            btnAdd.classList.add('hidden');
+        } else {
+            btnAdd.classList.remove('hidden');
+        }
+    }
+
+    function renderPhotoPreviews() {
+        const previewContainer = document.getElementById('previewContainer');
+        previewContainer.querySelectorAll('.img-preview-box').forEach(el => el.remove());
+
+        selectedFilesPool.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imgWrapper = document.createElement('div');
+                imgWrapper.className = 'img-preview-box w-16 h-16 rounded-xl overflow-hidden border-2 theme-border-primary shadow-2xs relative group';
+                imgWrapper.innerHTML = `
+                    <img src="${e.target.result}" class="w-full h-full object-cover">
+                    ${index === 0 ? '<span class="absolute bottom-0 inset-x-0 theme-bg-primary text-[8px] text-white text-center font-bold py-0.5 pointer-events-none">Kapak</span>' : ''}
+                    <button type="button" onclick="removePhoto(${index})" class="absolute top-1 right-1 w-4 h-4 bg-slate-900/70 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-[9px] font-bold transition shadow-xs">
+                        ✕
+                    </button>
+                `;
+                previewContainer.insertBefore(imgWrapper, document.getElementById('btnAddPhoto'));
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    let currentStep = 1;
+
+    function goToStep(step) {
+        if (step === currentStep) return;
+        setStepView(step);
+    }
+
+    function prevStep() {
+        if (currentStep > 1) {
+            goToStep(currentStep - 1);
+        } else {
+            window.location.href = '/dashboard';
+        }
+    }
+
+    function nextStep() {
+        if (currentStep === 1) {
+            goToStep(2);
+        } else if (currentStep === 2) {
+            goToStep(3);
+        } else if (currentStep === 3) {
+            document.getElementById('portfolioForm').submit();
+        }
+    }
+
+    function setStepView(step) {
+        document.getElementById('step-1').classList.add('hidden');
+        document.getElementById('step-2').classList.add('hidden');
+        document.getElementById('step-3').classList.add('hidden');
+
+        document.getElementById(`step-${step}`).classList.remove('hidden');
+
+        for (let i = 1; i <= 3; i++) {
+            const badge = document.getElementById(`badge-step-${i}`);
+            if (i <= step) {
+                badge.className = 'w-6 h-6 rounded-full theme-bg-primary text-white flex items-center justify-center text-xs font-bold transition shadow-2xs';
+            } else {
+                badge.className = 'w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xs font-bold transition';
+            }
+        }
+
+        document.getElementById('line-1-2').className = step >= 2 ? 'w-8 h-0.5 theme-bg-primary transition-colors' : 'w-8 h-0.5 bg-slate-200 transition-colors';
+        document.getElementById('line-2-3').className = step >= 3 ? 'w-8 h-0.5 theme-bg-primary transition-colors' : 'w-8 h-0.5 bg-slate-200 transition-colors';
+
+        const btnNext = document.getElementById('btnNext');
+        if (step === 3) {
+            btnNext.innerText = 'Uygun Emlakçıları Bul';
+        } else {
+            btnNext.innerText = 'Devam';
+        }
+
+        currentStep = step;
+    }
+
+    function toggleYetki() {
+        const cb = document.getElementById('yetkiCheckbox');
+        const box = document.getElementById('yetkiBox');
+        const icon = document.getElementById('yetkiCheckIcon');
+        const text = document.getElementById('yetkiText');
+
+        cb.checked = !cb.checked;
+
+        if (cb.checked) {
+            box.className = 'p-3 theme-bg-light border-2 theme-border-primary rounded-xl flex items-center gap-3 cursor-pointer select-none transition-all shadow-2xs';
+            icon.className = 'w-5 h-5 rounded theme-bg-primary text-white flex items-center justify-center text-xs font-bold transition';
+            icon.innerText = '✓';
+            text.className = 'text-xs font-bold theme-text-dark';
+            text.innerText = 'Satış yetkim mevcut';
+        } else {
+            box.className = 'p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-3 cursor-pointer select-none transition-all shadow-2xs';
+            icon.className = 'w-5 h-5 rounded border border-slate-300 bg-slate-50 text-transparent flex items-center justify-center text-xs font-bold transition';
+            icon.innerText = '';
+            text.className = 'text-xs font-semibold text-slate-500';
+            text.innerText = 'Satış yetkim bulunmuyor (Paylaşım)';
+        }
+    }
+
+    function selectVisibility(visType, card) {
+        document.getElementById('selectedVisibility').value = visType;
+
+        document.querySelectorAll('.vis-card').forEach(c => {
+            c.className = 'vis-card flex items-center justify-between p-3 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition shadow-2xs';
+            const circle = c.querySelector('.radio-circle');
+            const dot = c.querySelector('.dot');
+            circle.className = 'w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center radio-circle';
+            dot.className = 'w-2 h-2 rounded-full bg-transparent dot';
+        });
+
+        card.className = 'vis-card flex items-center justify-between p-3 theme-bg-light border-2 theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs';
+        const circle = card.querySelector('.radio-circle');
+        const dot = card.querySelector('.dot');
+        circle.className = 'w-4 h-4 rounded-full border-2 theme-border-primary flex items-center justify-center radio-circle';
+        dot.className = 'w-2 h-2 rounded-full theme-bg-primary dot';
+    }
+
+    function formatPriceInput(input) {
+        let rawVal = input.value.replace(/\D/g, '');
+        document.getElementById('realFiyatInput').value = rawVal;
+        if (rawVal) {
+            input.value = Number(rawVal).toLocaleString('tr-TR');
+        } else {
+            input.value = '';
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const defaultFiyat = document.getElementById('realFiyatInput').value;
+        if (defaultFiyat) {
+            document.getElementById('formattedFiyatInput').value = Number(defaultFiyat).toLocaleString('tr-TR');
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Mesajlarım - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-8 max-w-md mx-auto">
+    <!-- Üst Başlık -->
+    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h1 class="text-sm font-extrabold text-slate-900 tracking-tight">Mesajlarım</h1>
+        <span class="text-xs text-slate-400">İşbirlikleri & İletişim</span>
+    </div>
+
+    <div class="space-y-2">
+        {% if conversations and conversations|length > 0 %}
+            {% for conv in conversations %}
+            <a href="/messages/{{ conv.other_user.id }}" class="flex items-center gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 hover:border-emerald-300 transition shadow-2xs">
+                <!-- Avatar -->
+                <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 font-extrabold flex items-center justify-center shrink-0 overflow-hidden border border-emerald-200">
+                    {% if conv.other_user.profil_foto %}
+                        <img src="{{ conv.other_user.profil_foto }}" class="w-full h-full object-cover">
+                    {% else %}
+                        {{ (conv.other_user.ad_soyad[:2] if conv.other_user.ad_soyad else 'EM').upper() }}
+                    {% endif %}
+                </div>
+
+                <!-- İçerik -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xs font-bold text-slate-900 truncate">{{ conv.other_user.ad_soyad }}</h2>
+                        {% if conv.is_unread %}
+                            <span class="w-2 h-2 rounded-full bg-emerald-600 shrink-0"></span>
+                        {% endif %}
+                    </div>
+                    <p class="text-[10px] text-emerald-700 font-semibold truncate">{{ conv.other_user.sirket_unvani or 'Doğrulanmış Broker' }}</p>
+                    <p class="text-xs text-slate-600 truncate mt-1 font-medium">{{ conv.last_message }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2 shadow-2xs">
+                <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-xl">💬</div>
+                <h3 class="text-xs font-bold text-slate-800">Henüz Mesajınız Yok</h3>
+                <p class="text-[11px] text-slate-400 max-w-xs mx-auto">
+                    İşbirliği detay sayfasındaki "Mesajlaş" butonundan meslektaşınızla ilk sohbeti başlatabilirsiniz.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

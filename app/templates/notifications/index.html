@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Bildirimler - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-16 max-w-md mx-auto">
+    <!-- Üst Bar & Tümünü Okundu İşaretle Butonu -->
+    <div class="flex items-center justify-between pt-2 pb-1 border-b border-slate-200/80">
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/dashboard';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+                <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div>
+                <h1 class="text-sm font-black text-slate-900 tracking-tight">Bildirimler</h1>
+                <p class="text-[10px] text-slate-400 font-medium">İşbirlikleri, mesajlar ve portföy hareketleri</p>
+            </div>
+        </div>
+
+        {% if notifications and notifications|length > 0 %}
+        <button type="button" 
+                id="btnReadAll" 
+                onclick="handleReadAllNotifications()" 
+                class="px-2.5 py-1.5 rounded-xl theme-bg-light hover:theme-bg-primary hover:text-white theme-text-dark border theme-border-light text-[10px] font-black transition shadow-2xs active:scale-95 shrink-0">
+            ✓ Tümünü Oku
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Bildirim Kartları Listesi -->
+    <div id="notificationsContainer" class="space-y-2.5 pt-1">
+        {% if notifications and notifications|length > 0 %}
+            {% for n in notifications %}
+            {% set is_read = (n.okundu_mu if 'okundu_mu' in n else n.okundu) %}
+            <a href="{{ n.hedef_url or '/dashboard' }}" 
+               class="notif-item block bg-white border rounded-3xl p-4 shadow-2xs hover:theme-border-primary transition duration-150 group {% if not is_read %}border-emerald-300 ring-2 ring-emerald-500/10{% else %}border-slate-200/90{% endif %}">
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-2xl theme-bg-light theme-text-dark flex items-center justify-center shrink-0 border theme-border-light mt-0.5">
+                        <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1">
+                            <div class="flex items-center gap-1.5 truncate">
+                                <h2 class="text-xs font-black text-slate-900 truncate group-hover:theme-text-dark transition">
+                                    {{ n.baslik }}
+                                </h2>
+                                {% if not is_read %}
+                                <span class="unread-dot w-2 h-2 rounded-full theme-bg-primary shrink-0"></span>
+                                {% endif %}
+                            </div>
+                            <span class="text-[9px] text-slate-400 font-mono shrink-0">
+                                {{ n.created_at[:10] if n.created_at else '' }}
+                            </span>
+                        </div>
+
+                        <p class="text-[11px] text-slate-600 font-medium leading-relaxed mt-1">
+                            {{ n.icerik }}
+                        </p>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-8 text-center text-xs text-slate-400 space-y-2 shadow-2xs">
+                <div class="w-12 h-12 rounded-2xl theme-bg-light theme-text-dark flex items-center justify-center mx-auto border theme-border-light">
+                    <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </div>
+                <p class="font-bold text-slate-700">Yeni Bildiriminiz Yok</p>
+                <p class="text-[11px]">Meslektaşlarınızdan gelen teklifler ve mesajlar burada anlık olarak listelenecektir.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    async function handleReadAllNotifications() {
+        const btn = document.getElementById('btnReadAll');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = 'Okunuyor...';
+        }
+
+        try {
+            const res = await fetch('/notifications/api/read-all', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                // Kartlardaki yeşil halkaları ve noktaları temizle
+                document.querySelectorAll('.unread-dot').forEach(dot => dot.remove());
+                document.querySelectorAll('.notif-item').forEach(item => {
+                    item.classList.remove('border-emerald-300', 'ring-2', 'ring-emerald-500/10');
+                    item.classList.add('border-slate-200/90');
+                });
+                if (btn) {
+                    btn.innerText = '✓ Tümü Okundu';
+                    btn.className = "px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-bold shrink-0";
+                }
+            }
+        } catch (e) {
+            console.error("Tümünü okundu yapma hatası:", e);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = '✓ Tümünü Oku';
+            }
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "company/layout.html" %}
+
+{% block title %}Kampanya Yönetimi - Proje Yönetim Konsolu{% endblock %}
+{% block header_title %}Kampanyalar & Danışman Teşvikleri{% endblock %}
+
+{% block content %}
+<div class="space-y-6 pb-16">
+
+    <!-- Bilgilendirme ve Bildirim Özeti -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-2xs flex items-center justify-between">
+        <div>
+            <h2 class="text-base font-black text-slate-900 tracking-tight">Dönemsel Satış Kampanyaları</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Oluşturduğunuz kampanyalar danışman ağına anında bildirim olarak düşer ve projenizin satış hızını artırır.</p>
+        </div>
+        <button type="button" onclick="document.getElementById('addCampaignSection').scrollIntoView({behavior: 'smooth'})" class="px-4 py-2 theme-bg-primary theme-hover-bg text-white font-extrabold text-xs rounded-xl shadow-2xs transition active:scale-95">
+            + Yeni Kampanya Tanımla
+        </button>
+    </div>
+
+    {% if msg == 'created' %}
+    <div class="p-4 theme-bg-light border theme-border-light theme-text-dark text-xs font-bold rounded-2xl flex items-center gap-2 shadow-2xs">
+        <span>✓ Kampanya başarıyla oluşturuldu ve projeyle ilgilenen danışmanlara bildirim gönderildi!</span>
+    </div>
+    {% endif %}
+
+    <!-- 1. YENİ KAMPANYA TANIMLAMA FORMU -->
+    <div id="addCampaignSection" class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-2xs space-y-4">
+        <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full theme-bg-primary"></span>
+            <span>Yeni Kampanya Başlat & Ağa Duyur</span>
+        </h3>
+
+        <form action="/company/campaigns/add" method="POST" class="space-y-4">
+            <div class="grid grid-cols-3 gap-4">
+                
+                <!-- DİNAMİK TEMALI PROJE SEÇİMİ -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Kampanyanın Uygulanacağı Proje *</label>
+                    <input type="hidden" name="project_id" id="selectedProjectId" value="{{ projects[0].id if projects else '' }}">
+                    
+                    <div onclick="openProjectDrawer()" class="p-2.5 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-xl cursor-pointer transition shadow-2xs group flex items-center justify-between">
+                        <div class="truncate pr-2">
+                            <span id="displayProjectName" class="text-xs font-black text-slate-800 group-hover:theme-text-primary block truncate">
+                                {{ projects[0].ad if projects else 'Proje Seçiniz' }}
+                            </span>
+                            <span id="displayProjectRate" class="text-[10px] theme-text-dark font-bold block mt-0.5">
+                                {% if projects %}Mevcut Komisyon: %{{ projects[0].partner_komisyon_orani }}{% endif %}
+                            </span>
+                        </div>
+                        <span class="text-xs text-slate-400 group-hover:theme-text-primary transition shrink-0">▾</span>
+                    </div>
+                </div>
+
+                <div class="col-span-2">
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Kampanya Başlığı *</label>
+                    <input type="text" name="baslik" required placeholder="Örn: Eylül Özel Lansman Fırsatı, Yıl Sonu Peşin İndirimi" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:theme-border-primary focus:bg-white focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Müşteri İndirimi (%)</label>
+                    <input type="number" name="indirim_orani" value="5" min="0" max="50" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Vade Seçeneği (Ay)</label>
+                    <input type="number" name="vade_ay" value="24" min="0" max="120" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold theme-text-dark mb-1.5">Kampanya Danışman Komisyonu (%) *</label>
+                    <input type="number" step="0.5" name="partner_komisyon_orani" value="4.0" required class="w-full px-3.5 py-2.5 theme-bg-light border theme-border-light rounded-xl text-xs font-black theme-text-dark focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Kampanya Son Geçerlilik Tarihi</label>
+                    <input type="date" name="bitis_tarihi" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Danışmanlara Gösterilecek Kampanya Açıklaması</label>
+                <input type="text" name="kampanya_detayi" placeholder="Örn: 30 Eylül tarihine kadar yapılacak sözleşmelerde %5 nakit indirim ve %4 danışman primi." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none">
+            </div>
+
+            <div class="pt-2 flex justify-end">
+                <button type="submit" class="px-6 py-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs flex items-center gap-2 active:scale-95">
+                    <span>🚀 Kampanyayı Başlat & Danışmanları Bilgilendir</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 2. KAMPANYALAR LİSTESİ -->
+    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden space-y-4 p-5">
+        <div class="pb-2 border-b border-slate-100">
+            <h3 class="text-sm font-black text-slate-900">Mevcut Kampanyalarınız</h3>
+            <p class="text-xs text-slate-400">Yayındaki ve geçmiş promosyonlarınız</p>
+        </div>
+
+        {% if campaigns and campaigns|length > 0 %}
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="text-[10px] font-black text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
+                        <th class="py-3 px-4">Proje</th>
+                        <th class="py-3 px-4">Kampanya Başlığı</th>
+                        <th class="py-3 px-4 text-center">İndirim</th>
+                        <th class="py-3 px-4 text-center">Vade</th>
+                        <th class="py-3 px-4 text-center">Taahhüt Edilen Komisyon</th>
+                        <th class="py-3 px-4 text-center">Bitiş Tarihi</th>
+                        <th class="py-3 px-4 text-center">Durum</th>
+                        <th class="py-3 px-4 text-right">Yönet</th>
+                    </tr>
+                </thead>
+                <tbody class="font-bold text-slate-700 divide-y divide-slate-100">
+                    {% for c in campaigns %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4">
+                            <span class="font-extrabold text-slate-900 block">{{ c.projects.ad if c.projects else 'Proje' }}</span>
+                            <span class="text-[10px] text-slate-400">{{ c.projects.ilce if c.projects else '' }}, {{ c.projects.il if c.projects else '' }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 font-black text-slate-800">
+                            {{ c.baslik }}
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-md text-[11px] font-black">
+                                %{{ c.indirim_orani or 0 }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-center text-slate-600">
+                            {{ c.vade_ay or 0 }} Ay
+                        </td>
+                        <td class="py-3.5 px-4 text-center font-black theme-text-primary">
+                            %{{ c.partner_komisyon_orani }} Net
+                        </td>
+                        <td class="py-3.5 px-4 text-center text-slate-500 font-mono text-[11px]">
+                            {{ c.bitis_tarihi or 'Süresiz' }}
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black {% if c.durum == 'Aktif' %}theme-bg-light theme-text-dark border theme-border-light{% else %}bg-slate-100 text-slate-500{% endif %}">
+                                {{ c.durum }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            <form action="/company/campaigns/toggle-status" method="POST" class="inline">
+                                <input type="hidden" name="campaign_id" value="{{ c.id }}">
+                                <input type="hidden" name="project_id" value="{{ c.project_id }}">
+                                <input type="hidden" name="current_status" value="{{ c.durum }}">
+                                <button type="submit" class="text-xs font-extrabold {% if c.durum == 'Aktif' %}text-rose-600 hover:text-rose-800{% else %}theme-text-primary hover:theme-text-dark{% endif %}">
+                                    {% if c.durum == 'Aktif' %}Durdur{% else %}Aktif Et{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-12 text-center text-xs text-slate-400">
+            Henüz tanımlanmış bir satış kampanyanız bulunmuyor. Yukarıdaki formu kullanarak ilk kampanyayı başlatabilirsiniz.
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ================= DİNAMİK TEMALI PROJE SEÇİM ÇEKMECESİ ================= -->
+<div id="projectPickerDrawer" onclick="closeProjectDrawer()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="projectDrawerContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-6 space-y-4 shadow-2xl border-t theme-border-primary transform translate-y-full transition-transform duration-300 max-h-[75vh] flex flex-col justify-between">
+        
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto"></div>
+
+        <div>
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 class="text-xs font-black theme-text-dark uppercase tracking-tight">Kampanya Uygulanacak Proje</h3>
+                <button type="button" onclick="closeProjectDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold leading-none">✕</button>
+            </div>
+            
+            <div class="mt-3">
+                <input type="text" id="projectSearchInput" oninput="filterProjectList()" placeholder="Projelerinizde ara..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:theme-border-primary shadow-2xs">
+            </div>
+        </div>
+
+        <div id="projectOptionsList" class="flex-1 overflow-y-auto space-y-2 pr-1 py-1 custom-scrollbar">
+            {% for p in projects %}
+            <button type="button" 
+                    data-id="{{ p.id }}" 
+                    data-name="{{ p.ad }}" 
+                    data-rate="{{ p.partner_komisyon_orani }}"
+                    onclick="selectProjectItem(this)" 
+                    class="project-item-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light hover:theme-border-light text-left transition flex items-center justify-between group">
+                <div>
+                    <span class="block font-black text-slate-900 group-hover:theme-text-dark text-xs">{{ p.ad }}</span>
+                    <span class="block text-[10px] theme-text-primary font-bold mt-0.5">Mevcut Komisyon: %{{ p.partner_komisyon_orani }}</span>
+                </div>
+                <span class="theme-text-primary opacity-0 group-hover:opacity-100 font-black text-sm transition">✓</span>
+            </button>
+            {% else %}
+            <div class="py-8 text-center text-xs text-slate-400 font-bold">Kayıtlı aktif projeniz bulunamadı.</div>
+            {% endfor %}
+        </div>
+
+        <button type="button" onclick="closeProjectDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition mt-1">
+            Vazgeç
+        </button>
+    </div>
+</div>
+
+<script>
+    function openProjectDrawer() {
+        document.getElementById('projectSearchInput').value = '';
+        filterProjectList();
+
+        const currentId = document.getElementById('selectedProjectId').value;
+        document.querySelectorAll('.project-item-btn').forEach(btn => {
+            const isSelected = btn.getAttribute('data-id') === currentId;
+            if (isSelected) {
+                btn.className = 'project-item-btn w-full p-3.5 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between group shadow-2xs';
+                btn.querySelector('span.opacity-0, span.opacity-100').className = 'theme-text-primary opacity-100 font-black text-sm';
+            } else {
+                btn.className = 'project-item-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between group';
+                btn.querySelector('span.opacity-100, span.opacity-0').className = 'theme-text-primary opacity-0 group-hover:opacity-100 font-black text-sm transition';
+            }
+        });
+
+        const drawer = document.getElementById('projectPickerDrawer');
+        const content = document.getElementById('projectDrawerContent');
+        drawer.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeProjectDrawer() {
+        const drawer = document.getElementById('projectPickerDrawer');
+        const content = document.getElementById('projectDrawerContent');
+        drawer.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function selectProjectItem(btn) {
+        const pId = btn.getAttribute('data-id');
+        const pName = btn.getAttribute('data-name');
+        const pRate = btn.getAttribute('data-rate');
+
+        document.getElementById('selectedProjectId').value = pId;
+        document.getElementById('displayProjectName').innerText = pName;
+        document.getElementById('displayProjectRate').innerText = `Mevcut Komisyon: %${pRate}`;
+
+        closeProjectDrawer();
+    }
+
+    function filterProjectList() {
+        const query = document.getElementById('projectSearchInput').value.trim().toLocaleLowerCase('tr');
+        document.querySelectorAll('.project-item-btn').forEach(btn => {
+            const name = btn.getAttribute('data-name').toLocaleLowerCase('tr');
+            if (name.includes(query)) {
+                btn.style.display = 'flex';
+            } else {
+                btn.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

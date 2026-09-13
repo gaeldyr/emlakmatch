@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Alıcı Talebi Gir - Emlak Network{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-xl font-bold text-slate-900">🎯 Alıcı Talebi Oluştur</h2>
+            <p class="text-xs text-slate-500 mt-1">Müşterinizin kriterlerini girin, sistemdeki uygun portföylerle eşleştirelim.</p>
+        </div>
+        <a href="/dashboard" class="text-xs font-semibold text-slate-500 hover:text-slate-800">← Panele Dön</a>
+    </div>
+
+    {% if message %}
+    <div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <form action="/requests/buyer/add" method="POST" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Aranan İl</label>
+                <input type="text" name="il" placeholder="Örn: İstanbul" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Aranan İlçe</label>
+                <input type="text" name="ilce" placeholder="Örn: Kadıköy" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Gayrimenkul Tipi</label>
+                <select name="gayrimenkul_tipi" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+                    <option value="Daire">Daire</option>
+                    <option value="Villa">Villa</option>
+                    <option value="Arsa">Arsa</option>
+                    <option value="Ticari">Ticari</option>
+                    <option value="Rezidans">Rezidans</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Min Bütçe (TL)</label>
+                <input type="number" name="fiyat_min" placeholder="Örn: 5000000" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Maks Bütçe (TL)</label>
+                <input type="number" name="fiyat_max" placeholder="Örn: 8000000" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Oda Tercihi</label>
+            <input type="text" name="oda_sayisi" placeholder="Örn: 3+1" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        </div>
+
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kısa Açıklama / Notlar</label>
+            <textarea name="kisa_aciklama" rows="3" placeholder="Örn: Metroya yakın, ara kat, site içi tercih ediliyor..." class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+        </div>
+
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg text-sm transition mt-4">
+            Alıcı Talebini Kaydet ve Eşleşmeleri Bul
+        </button>
+    </form>
+</div>
+{% endblock %}

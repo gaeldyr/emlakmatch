@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Müşteri Tescil Et - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto space-y-4 pb-16">
+    <!-- Üst Bar (Dinamik Önceki Sayfaya Dönen Geri Tuşu) -->
+    <div class="flex items-center justify-between pt-2 pb-1 border-b border-slate-200/80">
+        <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/projects';}" class="text-slate-500 font-extrabold text-xs flex items-center gap-1 hover:text-slate-800 transition">
+            <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Projeler</span>
+        </button>
+        <h1 class="text-sm font-black text-slate-900 tracking-tight">Müşteri Koruma Tescili</h1>
+        <div class="w-6"></div>
+    </div>
+
+    <!-- Proje Özeti -->
+    <div class="bg-white rounded-3xl p-4 border border-slate-200/90 shadow-2xs flex items-center gap-3.5">
+        <div class="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-100 shadow-inner">
+            <img src="{{ project.kapak_fotografi or 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80' }}" class="w-full h-full object-cover">
+        </div>
+        <div class="flex-1 min-w-0">
+            <h2 class="text-xs font-black text-slate-900 truncate">{{ project.ad }}</h2>
+            <p class="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">📍 {{ project.ilce }}, {{ project.il or 'İstanbul' }}</p>
+            <span class="inline-block text-[10px] font-black theme-text-primary mt-1">
+                %{{ project.partner_komisyon_orani }} Komisyon Taahhütlü
+            </span>
+        </div>
+    </div>
+
+    <!-- Bilgilendirme Kutusu (90 Günlük Güvence) -->
+    <div class="p-4 theme-bg-light border theme-border-light rounded-3xl space-y-1.5 shadow-2xs">
+        <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full theme-bg-primary animate-pulse"></span>
+            <h3 class="text-xs font-black theme-text-dark">90 Gün Süreli Müşteri Koruma Güvencesi</h3>
+        </div>
+        <p class="text-[11px] text-slate-600 leading-relaxed font-medium">
+            Müşterinizin bilgileri kaydedildiğinde müteahhit firma telefon numarasını maskeli görecek ve bu müşteri 90 gün boyunca sizin adınıza tescillenecektir. Satış gerçekleştiğinde komisyon hakkınız sözleşmeyle korunur.
+        </p>
+    </div>
+
+    <!-- Tescil Formu (Mükerrer Bütçe Kaldırıldı & Sadece Projedeki Daire Tipleri) -->
+    <form action="/projects/{{ project.id }}/register-client" method="POST" class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+        <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Müşteri Adı Soyadı *</label>
+            <input type="text" name="musteri_ad_soyad" required placeholder="Örn: Mehmet Öz" 
+                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
+        </div>
+
+        <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Müşteri Telefon Numarası *</label>
+            <input type="tel" name="musteri_telefon" required placeholder="0532 123 45 67" 
+                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
+            <p class="text-[10px] text-slate-400 mt-1 font-medium">Müteahhide 0532 XXX XX 67 formatında maskelenerek iletilecektir.</p>
+        </div>
+
+        <!-- Projede Bulunan Daire Tipleri Dinamik Olarak Listelenir -->
+        <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1.5">İlgilendiği Daire / Ünite Tipi *</label>
+            <div class="relative">
+                <select name="ilgilenilen_daire_tipi" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition appearance-none cursor-pointer">
+                    {% for r_type in available_room_types %}
+                    <option value="{{ r_type }}">{{ r_type }}</option>
+                    {% endfor %}
+                </select>
+                <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs">▾</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1 font-medium">Yalnızca bu projenin bünyesinde satışta olan daire tipleri listelenmektedir.</p>
+        </div>
+
+        <div class="pt-2">
+            <button type="submit" class="w-full py-3.5 theme-bg-primary theme-hover-bg active:scale-[0.99] text-white font-black text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2">
+                <span>Müşteriyi Tescil Et & Korumayı Başlat</span>
+                <span>›</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

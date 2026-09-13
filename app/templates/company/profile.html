@@ -1,0 +1,390 @@
+{% extends "company/layout.html" %}
+
+{% block title %}Kurumsal Profil & Ayarlar - Proje Yönetim Konsolu{% endblock %}
+{% block header_title %}Kurumsal Künye & B2B Ayarlar{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6 pb-16">
+
+    <!-- Geri Bildirim Bildirimleri -->
+    {% if msg == 'profile_updated' %}
+    <div class="p-4 theme-bg-light border theme-border-light theme-text-dark text-xs font-bold rounded-2xl shadow-2xs">
+        ✓ Şirket ve yetkili bilgileriniz başarıyla güncellendi.
+    </div>
+    {% elif msg == 'pass_updated' %}
+    <div class="p-4 theme-bg-light border theme-border-light theme-text-dark text-xs font-bold rounded-2xl shadow-2xs">
+        ✓ Hesap şifreniz başarıyla değiştirildi.
+    </div>
+    {% elif msg == 'notify_updated' %}
+    <div class="p-4 theme-bg-light border theme-border-light theme-text-dark text-xs font-bold rounded-2xl shadow-2xs">
+        ✓ B2B bildirim ve otomasyon tercihleriniz kaydedildi.
+    </div>
+    {% elif msg == 'ticket_sent' %}
+    <div class="p-4 theme-bg-light border theme-border-light theme-text-dark text-xs font-bold rounded-2xl shadow-2xs">
+        ✓ Destek biletiniz EmlakMatch operasyon ekibine iletildi.
+    </div>
+    {% elif err %}
+    <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl shadow-2xs">
+        ✕ İşlem sırasında bir hata oluştu: {{ err }}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-3 gap-6 items-start">
+        
+        <!-- ================= SOL KOLON: KURUMSAL KİMLİK & RENK TEMA AYARI ================= -->
+        <div class="space-y-6">
+            
+            <!-- Profil Kartı -->
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-2xs text-center space-y-4">
+                <div class="relative w-24 h-24 mx-auto rounded-3xl bg-slate-100 border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center">
+                    {% if user and user.profil_foto %}
+                    <img src="{{ user.profil_foto }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="text-3xl font-black theme-text-primary">{{ (user.sirket_unvani or 'Ş')[0]|upper }}</span>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <h2 class="text-base font-black text-slate-900 leading-tight">{{ user.sirket_unvani or 'Şirket Unvanı' }}</h2>
+                    <p class="text-xs text-slate-400 font-bold mt-0.5">{{ user.marka_adi or 'Proje Geliştirici & İnşaat' }}</p>
+                </div>
+
+                <div class="flex items-center justify-center gap-2">
+                    <span class="px-3 py-1 theme-bg-light theme-text-dark border theme-border-light rounded-xl text-[10px] font-black flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full theme-bg-primary"></span>
+                        <span>Doğrulanmış Proje Geliştirici</span>
+                    </span>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 text-left text-xs space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 font-bold">Yetkili:</span>
+                        <span class="font-extrabold text-slate-800">{{ user.ad_soyad or '-' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 font-bold">Telefon:</span>
+                        <span class="font-extrabold text-slate-800 font-mono">{{ user.telefon or '-' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 font-bold">E-Posta:</span>
+                        <span class="font-extrabold text-slate-800 font-mono">{{ user.eposta or '-' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 font-bold">Merkez Bölge:</span>
+                        <span class="font-extrabold text-slate-800">{{ user.calisma_bolgesi or 'İstanbul' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= 16 RENKLİ KONSOL TEMA SEÇİCİ ================= -->
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div>
+                        <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full theme-bg-primary"></span>
+                            <span>Konsol Renk Teması</span>
+                        </h3>
+                        <p class="text-[10px] text-slate-400 font-medium">Uygulama yeşilini ve tüm butonları dönüştürün.</p>
+                    </div>
+                    <span id="themeNameBadge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-md theme-bg-light theme-text-dark">
+                        Zümrüt
+                    </span>
+                </div>
+
+                <!-- 16 Renk Paleti Grid -->
+                <div class="grid grid-cols-4 gap-2 pt-1" id="colorPaletteContainer"></div>
+
+                <div class="pt-2 text-center">
+                    <button type="button" onclick="resetDefaultTheme()" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition">
+                        Varsayılan Yeşile Sıfırla
+                    </button>
+                </div>
+            </div>
+
+            <!-- B2B SLA & Tescil Kuralı Kartı -->
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
+                <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full theme-bg-primary"></span>
+                    <span>B2B Tescil & SLA Taahhütleri</span>
+                </h3>
+                <div class="space-y-2 text-[11px] text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                    <p><strong>• 90 Gün Alıcı Koruması:</strong> Emlakçılar tarafından tescil edilen alıcılar 90 gün boyunca yönlendiren danışmanın adına tescillenir.</p>
+                    <p><strong>• Satış Mutabakatı:</strong> Satış kapatıldığında gerçekleşen bedel üzerinden taahhüt ettiğiniz komisyon oranı danışman hakedişine yansır.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ================= SAĞ KOLON: AYARLAR & GELİŞMİŞ MODÜLLER ================= -->
+        <div class="col-span-2 space-y-6">
+            
+            <!-- 1. Firma Künyesi & Logo Güncelleme Formu -->
+            <form action="/company/profile" method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+                <div class="pb-3 border-b border-slate-100">
+                    <h3 class="text-sm font-black text-slate-900 tracking-tight">Firma & Yetkili Bilgileri</h3>
+                    <p class="text-xs text-slate-400 font-medium">Bu bilgiler danışmanların proje detayında ve kurumsal künyenizde görüntülenir.</p>
+                </div>
+
+                <!-- Özel Tasarım Logo Yükleme Bileşeni -->
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-800">Şirket Logosu Değiştir</label>
+                        <p class="text-[10px] text-slate-400">PNG veya JPG formatında kurumsal logo yükleyin.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="file" 
+                               id="companyLogoInput" 
+                               name="profil_foto" 
+                               accept="image/*" 
+                               class="hidden" 
+                               onchange="handleLogoFileSelect(this)">
+                        
+                        <label for="companyLogoInput" 
+                               class="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl theme-bg-primary theme-hover-bg text-white text-xs font-bold transition shadow-xs active:scale-95">
+                            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span>Dosya Seç</span>
+                        </label>
+                        
+                        <span id="logoFileNameDisplay" class="text-xs text-slate-400 font-medium truncate max-w-[150px]">
+                            Seçilmedi
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Şirket Resmi Ticari Unvanı *</label>
+                        <input type="text" name="sirket_unvani" value="{{ user.sirket_unvani or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Ticari Marka / Geliştirici Adı</label>
+                        <input type="text" name="marka_adi" value="{{ user.marka_adi or '' }}" placeholder="Örn: EMA Geliştirme" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yetkili Adı Soyadı *</label>
+                        <input type="text" name="ad_soyad" value="{{ user.ad_soyad or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yetkili Telefon *</label>
+                        <input type="tel" name="telefon" value="{{ user.telefon or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Merkez / Faaliyet Bölgesi</label>
+                    <input type="text" name="calisma_bolgesi" value="{{ user.calisma_bolgesi or '' }}" placeholder="Örn: İstanbul - Beşiktaş, Sarıyer, Beykoz" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                </div>
+
+                <div class="pt-2 flex justify-end">
+                    <button type="submit" class="px-6 py-2.5 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                        Kurumsal Bilgileri Kaydet
+                    </button>
+                </div>
+            </form>
+
+            <!-- 2. B2B Bildirim & Otomasyon Tercihleri -->
+            <form action="/company/settings/notifications" method="POST" class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+                <div class="pb-3 border-b border-slate-100">
+                    <h3 class="text-sm font-black text-slate-900 tracking-tight">B2B Bildirim & İletişim Tercihleri</h3>
+                    <p class="text-xs text-slate-400 font-medium">Platformdan alacağınız anlık sistem ve operasyon uyarılarını özelleştirin.</p>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <label class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition">
+                        <div>
+                            <span class="font-extrabold text-slate-900 block">Yeni Müşteri Tescil Bildirimleri</span>
+                            <span class="text-[10px] text-slate-400 font-medium block">Bir danışman projenize alıcı yönlendirdiğinde anında bildirim alın.</span>
+                        </div>
+                        <input type="checkbox" name="notify_collab" value="true" {% if settings.notify_collab %}checked{% endif %} class="w-4 h-4 rounded border-slate-300">
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition">
+                        <div>
+                            <span class="font-extrabold text-slate-900 block">Danışman Mesaj Bildirimleri</span>
+                            <span class="text-[10px] text-slate-400 font-medium block">Partner brokerlar mesaj gönderdiğinde bildirim kutunuzda görüntüleyin.</span>
+                        </div>
+                        <input type="checkbox" name="notify_messages" value="true" {% if settings.notify_messages %}checked{% endif %} class="w-4 h-4 rounded border-slate-300">
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition">
+                        <div>
+                            <span class="font-extrabold text-slate-900 block">Satış ve Rezervasyon Onay Bildirimleri</span>
+                            <span class="text-[10px] text-slate-400 font-medium block">Kapatılan satış ve opsiyonlama işlemlerinin özet bildirimleri.</span>
+                        </div>
+                        <input type="checkbox" name="notify_sales" value="true" {% if settings.notify_sales %}checked{% endif %} class="w-4 h-4 rounded border-slate-300">
+                    </label>
+                </div>
+
+                <div class="pt-2 flex justify-end">
+                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                        Tercihleri Kaydet
+                    </button>
+                </div>
+            </form>
+
+            <!-- 3. Şifre Değiştirme Formu -->
+            <form action="/company/change-password" method="POST" class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+                <div class="pb-3 border-b border-slate-100">
+                    <h3 class="text-sm font-black text-slate-900 tracking-tight">Konsol Güvenliği & Şifre Değiştir</h3>
+                    <p class="text-xs text-slate-400 font-medium">Yönetici paneli giriş şifrenizi periyodik olarak güncelleyin.</p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Mevcut Şifre *</label>
+                        <input type="password" name="eski_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yeni Şifre *</label>
+                        <input type="password" name="yeni_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yeni Şifre Tekrar *</label>
+                        <input type="password" name="yeni_sifre_tekrar" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end">
+                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                        Şifreyi Güncelle
+                    </button>
+                </div>
+            </form>
+
+            <!-- 4. Destek Masası -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+                <div class="pb-3 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-900 tracking-tight">EmlakMatch Destek Masası</h3>
+                        <p class="text-xs text-slate-400 font-medium">Sistem yöneticilerine doğrudan teknik talep iletin veya bildirim oluşturun.</p>
+                    </div>
+                    <span class="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-xl">7/24 B2B Destek</span>
+                </div>
+
+                <form action="/company/settings/support" method="POST" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Konu Başlığı *</label>
+                        <input type="text" name="konu" required placeholder="Örn: Yeni Proje Broşür Yükleme Sorunu, Tescil İptali Hk." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Mesajınız / Talep Detayı *</label>
+                        <textarea name="mesaj" required rows="3" placeholder="Yaşadığınız durum hakkında detay veriniz..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:bg-white focus:outline-none leading-relaxed"></textarea>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="px-5 py-2 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                            Destek Talebini İlet
+                        </button>
+                    </div>
+                </form>
+
+                {% if tickets and tickets|length > 0 %}
+                <div class="pt-3 border-t border-slate-100 space-y-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Son Destek Talepleriniz</span>
+                    {% for t in tickets %}
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+                        <div>
+                            <span class="font-extrabold text-slate-900 block">{{ t.konu }}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">{{ t.created_at[:10] }}</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-lg text-[10px] font-black {% if t.durum == 'cozuldu' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
+                            {{ t.durum|upper }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 16 RENKLİ KURUMSAL PALET JS MOTORU & DOSYA SEÇİMİ -->
+<script>
+    function handleLogoFileSelect(input) {
+        const display = document.getElementById('logoFileNameDisplay');
+        if (input.files && input.files.length > 0) {
+            display.innerText = input.files[0].name;
+            display.className = 'text-xs font-bold text-slate-800 truncate max-w-[150px]';
+        } else {
+            display.innerText = 'Seçilmedi';
+            display.className = 'text-xs text-slate-400 font-medium truncate max-w-[150px]';
+        }
+    }
+
+    const colorThemes = [
+        { name: "Zümrüt", primary: "#059669", dark: "#047857", light: "#ecfdf5", border: "#a7f3d0" },
+        { name: "Safir Mavi", primary: "#2563eb", dark: "#1d4ed8", light: "#eff6ff", border: "#bfdbfe" },
+        { name: "Lüks Altın", primary: "#d97706", dark: "#b45309", light: "#fffbeb", border: "#fde68a" },
+        { name: "Gece Moru", primary: "#7c3aed", dark: "#6d28d9", light: "#f5f3ff", border: "#ddd6fe" },
+        { name: "Okyanus Turkuaz", primary: "#0891b2", dark: "#0e7490", light: "#ecfeff", border: "#a5f3fc" },
+        { name: "Kraliyet Bordo", primary: "#e11d48", dark: "#be123c", light: "#fff1f2", border: "#fecdd3" },
+        { name: "Derin Çivit", primary: "#4f46e5", dark: "#4338ca", light: "#eef2ff", border: "#c7d2fe" },
+        { name: "Bakır Bronz", primary: "#ea580c", dark: "#c2410c", light: "#fff7ed", border: "#fed7aa" },
+        { name: "Orman Yeşili", primary: "#16a34a", dark: "#15803d", light: "#f0fdf4", border: "#bbf7d0" },
+        { name: "Füme Grafit", primary: "#475569", dark: "#334155", light: "#f8fafc", border: "#cbd5e1" },
+        { name: "Gök Mavisi", primary: "#0284c7", dark: "#0369a1", light: "#f0f9ff", border: "#bae6fd" },
+        { name: "Gül Kurusu", primary: "#db2777", dark: "#be185d", light: "#fdf2f8", border: "#fbcfe8" },
+        { name: "Zeytin Haki", primary: "#65a30d", dark: "#4d7c0f", light: "#f7fee7", border: "#d9f99d" },
+        { name: "Asil Amber", primary: "#f59e0b", dark: "#d97706", light: "#fffbeb", border: "#fde68a" },
+        { name: "Mercan", primary: "#f43f5e", dark: "#e11d48", light: "#fff1f2", border: "#fecdd3" },
+        { name: "Koyu Petrol", primary: "#0f766e", dark: "#115e59", light: "#f0fdfa", border: "#99f6e4" }
+    ];
+
+    function applyTheme(theme) {
+        document.documentElement.style.setProperty('--brand-primary', theme.primary);
+        document.documentElement.style.setProperty('--brand-dark', theme.dark);
+        document.documentElement.style.setProperty('--brand-light', theme.light);
+        document.documentElement.style.setProperty('--brand-border', theme.border);
+
+        localStorage.setItem('company_theme_color', theme.primary);
+        localStorage.setItem('company_theme_dark', theme.dark);
+        localStorage.setItem('company_theme_light', theme.light);
+        localStorage.setItem('company_theme_border', theme.border);
+        localStorage.setItem('company_theme_name', theme.name);
+
+        document.getElementById('themeNameBadge').innerText = theme.name;
+        renderPalette();
+    }
+
+    function resetDefaultTheme() {
+        applyTheme(colorThemes[0]);
+    }
+
+    function renderPalette() {
+        const container = document.getElementById('colorPaletteContainer');
+        if (!container) return;
+
+        const currentPrimary = localStorage.getItem('company_theme_color') || "#059669";
+        const currentName = localStorage.getItem('company_theme_name') || "Zümrüt";
+        document.getElementById('themeNameBadge').innerText = currentName;
+
+        container.innerHTML = '';
+
+        colorThemes.forEach(t => {
+            const isSelected = (t.primary.toLowerCase() === currentPrimary.toLowerCase());
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.title = t.name;
+            btn.onclick = () => applyTheme(t);
+            btn.className = `h-9 rounded-xl flex items-center justify-center transition-all duration-150 transform hover:scale-105 ${isSelected ? 'ring-2 ring-slate-900 ring-offset-2 scale-105 shadow-sm' : 'border border-black/10'}`;
+            btn.style.backgroundColor = t.primary;
+
+            if (isSelected) {
+                btn.innerHTML = `<span class="text-white text-xs font-black drop-shadow-xs">✓</span>`;
+            }
+
+            container.appendChild(btn);
+        });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        renderPalette();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Tescil Başarılı - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-[70vh] flex flex-col justify-center items-center text-center space-y-4 px-4">
+    <div class="w-16 h-16 rounded-3xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700">
+        <svg class="w-8 h-8 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6L9 17l-5-5"></path>
+        </svg>
+    </div>
+
+    <div>
+        <h1 class="text-lg font-black text-slate-900">Müşteri Başarıyla Tescillendi</h1>
+        <p class="text-xs text-slate-500 mt-1">90 günlük lead koruma süreniz başladı.</p>
+    </div>
+
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 w-full max-w-xs space-y-1">
+        <span class="text-[10px] font-bold text-slate-400 block uppercase">Tescil Belge Numarası</span>
+        <span class="text-base font-mono font-black text-emerald-800 block tracking-wider">{{ tescil_code }}</span>
+    </div>
+
+    <div class="pt-2 w-full max-w-xs space-y-2">
+        <a href="/projects" class="block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-3 rounded-xl transition">
+            Proje Ağına Dön
+        </a>
+        <a href="/dashboard" class="block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition">
+            Ana Sayfaya Dön
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,475 @@
+{% extends "company/layout.html" %}
+
+{% block title %}{{ project.ad }} - Projeyi Düzenle{% endblock %}
+{% block header_title %}Projeyi Düzenle{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6 pb-16">
+    
+    <!-- Üst Bar -->
+    <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+            <h2 class="text-base font-black text-slate-900 tracking-tight">{{ project.ad }}</h2>
+            <p class="text-xs text-slate-500 font-medium">Proje detaylarını, fiyat aralıklarını, stok durumunu, 40 niteliği ve komisyon şartlarını güncelleyin.</p>
+        </div>
+        <a href="/company/projects" class="text-xs font-bold text-slate-500 hover:text-slate-800 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-2xs transition">
+            ‹ Projelerime Dön
+        </a>
+    </div>
+
+    {% if error %}
+    <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="/company/projects/edit/{{ project.id }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        
+        <!-- 1. TEMEL BİLGİLER -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+            <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full theme-bg-primary"></span>
+                <span>1. Proje Kimliği & Konum</span>
+            </h3>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div class="col-span-2">
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Proje Adı *</label>
+                    <input type="text" name="ad" value="{{ project.ad }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yayın Durumu *</label>
+                    <select name="durum" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">
+                        <option value="Aktif" {% if project.durum == 'Aktif' %}selected{% endif %}>Aktif (Yayında)</option>
+                        <option value="Pasif" {% if project.durum == 'Pasif' %}selected{% endif %}>Pasif (Ağa Kapalı)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Çekmeceli İl & İlçe Seçimi -->
+            <div class="grid grid-cols-3 gap-4">
+                <input type="hidden" name="il" id="realCityInput" value="{{ project.il or 'İstanbul' }}">
+                <input type="hidden" name="ilce" id="realDistrictInput" value="{{ project.ilce or 'Beşiktaş' }}">
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">İl Seçimi *</label>
+                    <div onclick="openLocationDrawer('city')" class="p-2.5 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-xl cursor-pointer transition shadow-2xs group flex items-center justify-between">
+                        <span id="displayCityText" class="text-xs font-black text-slate-800 group-hover:theme-text-primary">{{ project.il or 'İstanbul' }}</span>
+                        <span class="text-xs text-slate-400">▾</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">İlçe Seçimi *</label>
+                    <div onclick="openLocationDrawer('district')" class="p-2.5 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-xl cursor-pointer transition shadow-2xs group flex items-center justify-between">
+                        <span id="displayDistrictText" class="text-xs font-black text-slate-800 group-hover:theme-text-primary">{{ project.ilce or 'Beşiktaş' }}</span>
+                        <span class="text-xs text-slate-400">▾</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Mahalle / Mevki</label>
+                    <input type="text" name="bolge" value="{{ project.bolge or '' }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Proje Tipi *</label>
+                    <select name="proje_tipi" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">
+                        <option value="Konut" {% if project.proje_tipi == 'Konut' %}selected{% endif %}>Konut / Rezidans</option>
+                        <option value="Villa" {% if project.proje_tipi == 'Villa' %}selected{% endif %}>Müstakil Lüks Villa</option>
+                        <option value="Karma" {% if project.proje_tipi == 'Karma' %}selected{% endif %}>Karma Yaşam</option>
+                        <option value="Ticari" {% if project.proje_tipi == 'Ticari' %}selected{% endif %}>Ticari / Ofis</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Teslim Tarihi</label>
+                    <input type="text" name="teslim_tarihi" value="{{ project.teslim_tarihi or '' }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Kalan Satıştaki Stok</label>
+                    <input type="number" name="stok_adeti" value="{{ project.stok_adeti or 1 }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. FİYAT VE B2B KOMİSYON ŞARTLARI -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+            <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full theme-bg-primary"></span>
+                <span>2. Fiyat Aralığı & Komisyon Şartları</span>
+            </h3>
+
+            <!-- Noktalı Fiyat Formatlama -->
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Min Başlangıç Fiyatı (TL) *</label>
+                    <input type="text" id="displayMinFiyat" required value="{{ '{:,}'.format(project.min_fiyat).replace(',', '.') if project.min_fiyat else '' }}" oninput="formatPriceField(this, 'realMinFiyat')" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">
+                    <input type="hidden" name="min_fiyat" id="realMinFiyat" value="{{ project.min_fiyat }}">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Maksimum Tavan Fiyat (TL) *</label>
+                    <input type="text" id="displayMaxFiyat" required value="{{ '{:,}'.format(project.max_fiyat).replace(',', '.') if project.max_fiyat else '' }}" oninput="formatPriceField(this, 'realMaxFiyat')" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">
+                    <input type="hidden" name="max_fiyat" id="realMaxFiyat" value="{{ project.max_fiyat }}">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Toplam Proje Ünitesi</label>
+                    <input type="number" name="toplam_unite" value="{{ project.toplam_unite or 1 }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 pt-2">
+                <div class="p-4 theme-bg-light border theme-border-light rounded-2xl flex items-center justify-between">
+                    <div>
+                        <h4 class="text-xs font-black theme-text-dark">Standart Danışman Komisyonu (%) *</h4>
+                        <p class="text-[10px] theme-text-dark mt-0.5 opacity-80">Tüm danışmanlara taahhüt edilen net satış primi.</p>
+                    </div>
+                    <div class="w-24">
+                        <input type="number" step="0.5" name="partner_komisyon_orani" value="{{ project.partner_komisyon_orani }}" required class="w-full px-3 py-2 bg-white border theme-border-light rounded-xl text-xs font-black theme-text-dark text-center focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <h4 class="text-xs font-black text-slate-900">Kurucu Ofis Komisyonu (%)</h4>
+                        <p class="text-[10px] text-slate-500 mt-0.5">VIP sözleşmeli ofisler için taahhüt oranı.</p>
+                    </div>
+                    <div class="w-24">
+                        <input type="number" step="0.5" name="kurucu_ofis_komisyon_orani" value="{{ project.kurucu_ofis_komisyon_orani or 4.0 }}" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-black text-slate-900 text-center focus:outline-none">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. GÖRSELLER, KAT PLANLARI & BROŞÜR -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+            <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full theme-bg-primary"></span>
+                <span>3. Görseller ve Dijital Satış Dosyaları</span>
+            </h3>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <label class="block text-[11px] font-black text-slate-800">Ana Kapak Görselini Değiştir</label>
+                    {% if project.kapak_fotografi %}
+                    <div class="w-full h-20 rounded-xl overflow-hidden mb-2 border border-slate-200">
+                        <img src="{{ project.kapak_fotografi }}" class="w-full h-full object-cover">
+                    </div>
+                    {% endif %}
+                    <input type="file" name="kapak_fotografi" accept="image/*" class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold theme-bg-primary file:text-white hover:theme-hover-bg">
+                </div>
+
+                <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <label class="block text-[11px] font-black text-slate-800">Galeriye Görsel Ekle</label>
+                    <span class="text-[10px] text-slate-400 block font-bold">Mevcut {{ (project.galeri|length) if project.galeri else 0 }} görsel var</span>
+                    <input type="file" name="galeri_fotograflari" accept="image/*" multiple class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold theme-bg-primary file:text-white hover:theme-hover-bg">
+                </div>
+
+                <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <label class="block text-[11px] font-black text-slate-800">Kat Planı Çizimleri Ekle</label>
+                    <span class="text-[10px] text-slate-400 block font-bold">Mevcut {{ (project.kat_planlari|length) if project.kat_planlari else 0 }} plan var</span>
+                    <input type="file" name="kat_plani_dosyalari" accept="image/*" multiple class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold theme-bg-primary file:text-white hover:theme-hover-bg">
+                </div>
+            </div>
+
+            <!-- Satış Broşürü PDF -->
+            <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
+                <div>
+                    <label class="block text-[11px] font-black text-slate-800">Proje Sunum Broşürü (PDF)</label>
+                    {% if project.brosur_url %}
+                    <a href="{{ project.brosur_url }}" target="_blank" class="text-[10px] theme-text-primary font-bold underline">Mevcut Broşürü İncele ↗</a>
+                    {% else %}
+                    <span class="text-[10px] text-slate-400">Yüklü broşür yok</span>
+                    {% endif %}
+                </div>
+                <div class="w-72 shrink-0">
+                    <input type="file" name="brosur_dosyasi" accept=".pdf" class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-800 file:text-white">
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 40 ADET NİTELİK & DONATI SEÇİMİ -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div>
+                    <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full theme-bg-primary"></span>
+                        <span>4. Proje Nitelikleri & Donatılar (40 Özellik)</span>
+                    </h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Seçtiğiniz donatılar danışmanların hazır alıcı talepleriyle otomatik eşleşir.</p>
+                </div>
+                <span id="featureCountBadge" class="text-[10px] font-black px-2.5 py-1 rounded-xl theme-bg-light theme-text-dark">
+                    0 Seçildi
+                </span>
+            </div>
+
+            <div class="space-y-3.5" id="featuresGridContainer">
+                <!-- Site & Güvenlik -->
+                <div>
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1.5">Site & Güvenlik</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for f in ["Site İçi", "7/24 Güvenlik", "Kamera Sistemi", "Kapalı Otopark", "Açık Otopark", "Vale Hizmeti", "Resepsiyon", "Kartlı Giriş"] %}
+                        <button type="button" data-feat="{{ f }}" onclick="toggleFeatureTag('{{ f }}', this)" class="feature-chip px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 transition">
+                            + {{ f }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Sosyal Alanlar & Spor -->
+                <div>
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1.5">Sosyal Alanlar & Spor</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for f in ["Açık Havuz", "Kapalı Havuz", "Çocuk Havuzu", "Fitness / Spor Salonu", "Sauna", "Hamam", "SPA", "Tenis Kortu", "Basketbol Sahası", "Çocuk Oyun Parkı", "Yürüyüş Parkuru", "Kafeterya / Restoran"] %}
+                        <button type="button" data-feat="{{ f }}" onclick="toggleFeatureTag('{{ f }}', this)" class="feature-chip px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 transition">
+                            + {{ f }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Yapı & Konut Nitelikleri -->
+                <div>
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1.5">Yapı & Konfor</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for f in ["Yerden Isıtma", "Merkezi Isıtma", "Kombi (Doğalgaz)", "Akıllı Ev Sistemi", "VRF / Klima", "Ankastre Mutfak", "Giyinme Odası", "Ebeveyn Banyosu", "Çamaşır Odası", "Geniş Balkon", "Teras", "Müstakil Bahçe", "Depo Alanı", "Çift Asansör", "Yük Asansörü"] %}
+                        <button type="button" data-feat="{{ f }}" onclick="toggleFeatureTag('{{ f }}', this)" class="feature-chip px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 transition">
+                            + {{ f }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Manzara & Altyapı -->
+                <div>
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1.5">Manzara, Konum & Altyapı</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for f in ["Deniz Manzarası", "Boğaz Manzarası", "Orman / Doğa Manzarası", "Şehir Manzarası", "Metroya Yakın", "Metrobüse Yakın", "Havalimanına Yakın", "Denize Sıfır", "Jeneratör", "Su Deposu", "Yangın Merdiveni", "Deprem Yönetmeliğine Uygun"] %}
+                        <button type="button" data-feat="{{ f }}" onclick="toggleFeatureTag('{{ f }}', this)" class="feature-chip px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 transition">
+                            + {{ f }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. DETAYLI AÇIKLAMA VE ÖDEME PLANI -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+            <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full theme-bg-primary"></span>
+                <span>5. Detaylı Açıklama & Ödeme Planı</span>
+            </h3>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Proje Açıklaması</label>
+                <textarea name="aciklama" id="projectDescriptionInput" rows="4" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs leading-relaxed font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">{{ project.aciklama or '' }}</textarea>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Ödeme Planı & Vade Koşulları</label>
+                <textarea name="odeme_plani" rows="2" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs leading-relaxed font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none">{{ project.odeme_plani or '' }}</textarea>
+            </div>
+        </div>
+
+        <!-- KAYDET BUTONU -->
+        <div class="pt-2">
+            <button type="submit" class="w-full py-4 theme-bg-primary theme-hover-bg text-white font-black text-sm rounded-2xl transition shadow-md active:scale-[0.99] flex items-center justify-center gap-2">
+                <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Değişiklikleri Kaydet</span>
+            </button>
+        </div>
+
+    </form>
+</div>
+
+<!-- ================= ÇEKMECE MODAL ================= -->
+<div id="locationPickerDrawer" onclick="closeLocationDrawer()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="locationDrawerContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-3.5 shadow-2xl border-t theme-border-primary transform translate-y-full transition-transform duration-300 max-h-[80vh] flex flex-col justify-between">
+        
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto"></div>
+
+        <div>
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 id="locationDrawerTitle" class="text-xs font-black theme-text-dark uppercase tracking-tight">İl Seçiniz</h3>
+                <button type="button" onclick="closeLocationDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+            
+            <div class="mt-2.5">
+                <input type="text" id="drawerSearchInput" oninput="filterDrawerOptions()" placeholder="Listede ara..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs">
+            </div>
+        </div>
+
+        <div id="drawerOptionsList" class="flex-1 overflow-y-auto space-y-1.5 pr-1 py-1 custom-scrollbar"></div>
+
+        <button type="button" onclick="closeLocationDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition mt-2">
+            Vazgeç
+        </button>
+    </div>
+</div>
+
+<script id="turkeyDataJson" type="application/json">
+{{ turkey_data|tojson if turkey_data else '{}' }}
+</script>
+
+<script>
+    // 1. 40 Nitelik Çipi Seçim Motoru ve Mevcut Açıklamadan Yükleme
+    let selectedFeaturesList = [];
+
+    function initExistingFeatures() {
+        const descArea = document.getElementById('projectDescriptionInput');
+        const rawDesc = descArea ? descArea.value.toLowerCase() : '';
+
+        document.querySelectorAll('#featuresGridContainer button[data-feat]').forEach(btn => {
+            const fName = btn.getAttribute('data-feat');
+            if (rawDesc.includes(fName.toLowerCase())) {
+                selectedFeaturesList.push(fName);
+                btn.className = "feature-chip px-2.5 py-1 theme-bg-primary text-white border theme-border-primary rounded-xl text-[11px] font-black transition shadow-2xs";
+                btn.innerText = "✓ " + fName;
+            }
+        });
+
+        document.getElementById('featureCountBadge').innerText = `${selectedFeaturesList.length} Seçildi`;
+    }
+
+    function toggleFeatureTag(featureName, btn) {
+        const idx = selectedFeaturesList.indexOf(featureName);
+        if (idx > -1) {
+            selectedFeaturesList.splice(idx, 1);
+            btn.className = "feature-chip px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 transition";
+            btn.innerText = "+ " + featureName;
+        } else {
+            selectedFeaturesList.push(featureName);
+            btn.className = "feature-chip px-2.5 py-1 theme-bg-primary text-white border theme-border-primary rounded-xl text-[11px] font-black transition shadow-2xs";
+            btn.innerText = "✓ " + featureName;
+        }
+
+        document.getElementById('featureCountBadge').innerText = `${selectedFeaturesList.length} Seçildi`;
+        
+        const descArea = document.getElementById('projectDescriptionInput');
+        let currentText = descArea.value;
+        const parts = currentText.split("\n\nÖzellikler:");
+        const baseDesc = parts[0].trim();
+        
+        if (selectedFeaturesList.length > 0) {
+            descArea.value = baseDesc ? `${baseDesc}\n\nÖzellikler: ${selectedFeaturesList.join(', ')}` : selectedFeaturesList.join(', ');
+        } else {
+            descArea.value = baseDesc;
+        }
+    }
+
+    // 2. Fiyat Formatlama
+    function formatPriceField(input, hiddenId) {
+        let rawVal = input.value.replace(/\D/g, '');
+        document.getElementById(hiddenId).value = rawVal || '0';
+        if (rawVal) {
+            input.value = Number(rawVal).toLocaleString('tr-TR');
+        } else {
+            input.value = '';
+        }
+    }
+
+    // 3. Konum Çekmecesi
+    const rawDataEl = document.getElementById('turkeyDataJson');
+    let turkeyData = {};
+    try {
+        turkeyData = JSON.parse(rawDataEl.textContent || '{}');
+    } catch(e) {
+        turkeyData = { "İstanbul": ["Beşiktaş", "Beykoz", "Kadıköy", "Sarıyer"] };
+    }
+
+    let currentPickerMode = 'city';
+    let currentPool = [];
+
+    function openLocationDrawer(mode) {
+        currentPickerMode = mode;
+        const titleEl = document.getElementById('locationDrawerTitle');
+        const searchInput = document.getElementById('drawerSearchInput');
+        searchInput.value = '';
+
+        const collator = new Intl.Collator('tr');
+
+        if (mode === 'city') {
+            titleEl.innerText = 'İl Seçiniz';
+            currentPool = Object.keys(turkeyData).sort(collator.compare);
+        } else {
+            const selectedCity = document.getElementById('realCityInput').value || 'İstanbul';
+            titleEl.innerText = `${selectedCity} - İlçe Seçiniz`;
+            const rawDistricts = turkeyData[selectedCity] || ["Merkez"];
+            currentPool = [...rawDistricts].sort(collator.compare);
+        }
+
+        renderDrawerOptions(currentPool);
+
+        const drawer = document.getElementById('locationPickerDrawer');
+        const content = document.getElementById('locationDrawerContent');
+        drawer.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeLocationDrawer() {
+        const drawer = document.getElementById('locationPickerDrawer');
+        const content = document.getElementById('locationDrawerContent');
+        drawer.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function renderDrawerOptions(items) {
+        const container = document.getElementById('drawerOptionsList');
+        container.innerHTML = '';
+
+        const currentActive = (currentPickerMode === 'city') 
+            ? document.getElementById('realCityInput').value 
+            : document.getElementById('realDistrictInput').value;
+
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-xs text-slate-400">Eşleşen sonuç bulunamadı.</div>';
+            return;
+        }
+
+        items.forEach(item => {
+            const isSelected = (item.trim().toLocaleLowerCase('tr') === currentActive.trim().toLocaleLowerCase('tr'));
+            const optBtn = document.createElement('button');
+            optBtn.type = 'button';
+            optBtn.onclick = () => selectLocationItem(item);
+
+            if (isSelected) {
+                optBtn.className = 'w-full flex items-center justify-between p-3 rounded-xl theme-bg-primary text-white font-black text-xs transition shadow-xs';
+                optBtn.innerHTML = `<span>${item}</span><span class="text-sm">✓</span>`;
+            } else {
+                optBtn.className = 'w-full flex items-center justify-between p-3 rounded-xl bg-white hover:theme-bg-light text-slate-800 hover:theme-text-dark border border-slate-200/80 font-bold text-xs transition shadow-2xs';
+                optBtn.innerHTML = `<span>${item}</span>`;
+            }
+
+            container.appendChild(optBtn);
+        });
+    }
+
+    function filterDrawerOptions() {
+        const query = document.getElementById('drawerSearchInput').value.trim().toLocaleLowerCase('tr');
+        const filtered = currentPool.filter(it => it.toLocaleLowerCase('tr').includes(query));
+        renderDrawerOptions(filtered);
+    }
+
+    function selectLocationItem(val) {
+        if (currentPickerMode === 'city') {
+            document.getElementById('realCityInput').value = val;
+            document.getElementById('displayCityText').innerText = val;
+
+            const availableDistricts = turkeyData[val] || ["Merkez"];
+            const defaultDistrict = availableDistricts[0];
+            document.getElementById('realDistrictInput').value = defaultDistrict;
+            document.getElementById('displayDistrictText').innerText = defaultDistrict;
+        } else {
+            document.getElementById('realDistrictInput').value = val;
+            document.getElementById('displayDistrictText').innerText = val;
+        }
+        closeLocationDrawer();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        initExistingFeatures();
+    });
+</script>
+{% endblock %}

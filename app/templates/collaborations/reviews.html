@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}İşbirliğini Değerlendir - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-[80vh] flex flex-col justify-between">
+    <div>
+        <!-- Geri Butonu -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <a href="/collaborations/my?tab=tamamlanan" class="text-slate-500 hover:text-slate-800 p-1 -ml-1">
+                <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            </a>
+            <h1 class="text-sm font-extrabold text-slate-900 tracking-tight">İşbirliğini Değerlendir</h1>
+            <div class="w-6"></div>
+        </div>
+
+        <form id="reviewForm" action="/collaborations/review" method="POST" class="space-y-5 mt-4">
+            <input type="hidden" name="collab_id" value="{{ collab.id if collab else '' }}">
+            <input type="hidden" name="target_id" value="{{ target_id }}">
+            <input type="hidden" name="puan" id="selectedRating" value="5">
+
+            <!-- Emlakçı Bilgisi -->
+            <div class="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl text-center space-y-1">
+                <span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">İşbirliği Tamamlandı</span>
+                <h2 class="text-sm font-extrabold text-slate-900">{{ target_name or 'Meslektaşınız' }}</h2>
+                <p class="text-[11px] text-slate-500">Bu süreçteki profesyonelliği ve iletişimi nasıldı?</p>
+            </div>
+
+            <!-- 5 Yıldız Seçimi -->
+            <div class="text-center space-y-2">
+                <div class="flex items-center justify-center gap-2">
+                    <button type="button" onclick="setRating(1)" class="star-btn text-3xl text-amber-400 transition transform hover:scale-110">★</button>
+                    <button type="button" onclick="setRating(2)" class="star-btn text-3xl text-amber-400 transition transform hover:scale-110">★</button>
+                    <button type="button" onclick="setRating(3)" class="star-btn text-3xl text-amber-400 transition transform hover:scale-110">★</button>
+                    <button type="button" onclick="setRating(4)" class="star-btn text-3xl text-amber-400 transition transform hover:scale-110">★</button>
+                    <button type="button" onclick="setRating(5)" class="star-btn text-3xl text-amber-400 transition transform hover:scale-110">★</button>
+                </div>
+                <p id="ratingLabel" class="text-xs font-bold text-slate-700">Mükemmel (5/5)</p>
+            </div>
+
+            <!-- Yorum Kutusu -->
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1.5">Görüş ve Deneyiminiz (Opsiyonel)</label>
+                <textarea name="yorum" rows="3" placeholder="Süreç çok şeffaf ve hızlı ilerledi, tekrar çalışmak isterim..." class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-2xs leading-relaxed"></textarea>
+            </div>
+        </form>
+    </div>
+
+    <!-- Gönder Butonu -->
+    <div class="pt-4 pb-2">
+        <button type="button" onclick="document.getElementById('reviewForm').submit()" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold py-3 rounded-xl text-sm transition shadow-sm">
+            Değerlendirmeyi Kaydet & Tamamla
+        </button>
+    </div>
+</div>
+
+<script>
+    const labels = {
+        1: "Çok Zayıf (1/5)",
+        2: "Geliştirilmeli (2/5)",
+        3: "Ortalama (3/5)",
+        4: "Başarılı (4/5)",
+        5: "Mükemmel (5/5)"
+    };
+
+    function setRating(val) {
+        document.getElementById('selectedRating').value = val;
+        document.getElementById('ratingLabel').innerText = labels[val];
+
+        const stars = document.querySelectorAll('.star-btn');
+        stars.forEach((s, idx) => {
+            if (idx < val) {
+                s.className = 'star-btn text-3xl text-amber-400 transition transform hover:scale-110';
+            } else {
+                s.className = 'star-btn text-3xl text-slate-200 transition transform hover:scale-110';
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Eşleşen Sonuçlar - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-16 max-w-md mx-auto">
+    <!-- Üst Bar (Dinamik Tarayıcı Geçmişine Dönen Geri Tuşu) -->
+    <div class="flex items-center justify-between pb-2 border-b border-slate-200/80 pt-1">
+        <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/demands/add';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h1 class="text-sm font-extrabold text-slate-900 tracking-tight">Eşleşen Sonuçlar</h1>
+        <div class="w-6"></div>
+    </div>
+
+    <!-- Filtre Kriterleri Özeti -->
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between text-xs">
+        <div class="truncate pr-2">
+            <span class="font-extrabold text-slate-900 block truncate">{{ criteria.ilce }}, {{ criteria.il }} • {{ criteria.gayrimenkul_tipi }}</span>
+            <span class="text-[10px] text-slate-400 block mt-0.5 truncate">
+                Bütçe: {% if criteria.max_butce %}{{ '{:,}'.format(criteria.max_butce).replace(',', '.') }} TL'ye kadar{% else %}Sınırsız{% endif %}
+            </span>
+        </div>
+        <a href="/demands/add" class="text-[11px] font-bold theme-text-dark theme-bg-light px-2.5 py-1 rounded-xl border theme-border-light shrink-0">
+            Filtrele
+        </a>
+    </div>
+
+    <!-- SEKMELİ GEÇİŞ (PROJELER vs EMLAKÇI PORTFÖYLERİ) -->
+    <div class="grid grid-cols-2 p-1 theme-bg-light rounded-2xl border theme-border-light text-xs font-black text-center">
+        <button type="button" 
+                id="btnTabProjects" 
+                onclick="switchResultTab('projects')" 
+                class="py-2.5 rounded-xl transition-all duration-150 theme-bg-primary text-white shadow-sm">
+            Projeler ({{ project_results|length }})
+        </button>
+        <button type="button" 
+                id="btnTabPortfolios" 
+                onclick="switchResultTab('portfolios')" 
+                class="py-2.5 rounded-xl transition-all duration-150 theme-text-dark hover:bg-white/50">
+            Portföyler ({{ results|length }})
+        </button>
+    </div>
+
+    <!-- ================= 1. SEKME: SIFIR PROJELER ================= -->
+    <div id="sectionProjects" class="space-y-3 pt-1">
+        {% if project_results and project_results|length > 0 %}
+            {% for prj in project_results %}
+            <div class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-14 h-14 rounded-2xl bg-slate-100 overflow-hidden shrink-0 border border-slate-100 shadow-inner">
+                            <img src="{{ prj.kapak_fotografi or 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80' }}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-xs font-black text-slate-900 truncate">{{ prj.ad }}</h3>
+                            <p class="text-[10px] text-slate-400 font-semibold truncate mt-0.5">
+                                {{ prj.users.sirket_unvani if prj.users else 'Proje Geliştirici' }} • 📍 {{ prj.ilce }}
+                            </p>
+                            <span class="inline-block text-[10px] font-black theme-text-dark mt-1">
+                                %{{ prj.partner_komisyon_orani }} Danışman Komisyonu
+                            </span>
+                        </div>
+                    </div>
+
+                    <span class="px-2 py-0.5 rounded-lg text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light shrink-0">
+                        %{{ prj.match_score }} Uyum
+                    </span>
+                </div>
+
+                <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between text-xs">
+                    <div>
+                        <span class="text-[10px] text-slate-400 font-bold block">Fiyat Aralığı:</span>
+                        <span class="font-extrabold text-slate-800 text-[11px]">
+                            {{ '{:,}'.format(prj.min_fiyat).replace(',', '.') if prj.min_fiyat else '0' }} - {{ '{:,}'.format(prj.max_fiyat).replace(',', '.') if prj.max_fiyat else '0' }} TL
+                        </span>
+                    </div>
+                    {% if prj.matched_feature_count %}
+                    <span class="text-[10px] font-bold theme-text-dark bg-white px-2 py-1 rounded-xl border border-slate-200/80">
+                        ✓ {{ prj.matched_feature_count }} Donatı
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                    <a href="/projects/detail/{{ prj.id }}" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95">
+                        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span>Projeyi İncele</span>
+                    </a>
+
+                    <a href="/projects/{{ prj.id }}/register-client" class="w-full py-2.5 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs flex items-center justify-center gap-1.5 active:scale-95">
+                        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                        <span>Müşteri Tescil Et</span>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-8 text-center text-xs text-slate-400 space-y-1">
+                <p class="font-bold text-slate-700">Eşleşen Sıfır Proje Bulunamadı</p>
+                <p class="text-[11px]">Kriterlerinize uygun bir müteahhit projesi yayına girdiğinde bildirim alacaksınız.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- ================= 2. SEKME: EMLAKÇI PORTFÖYLERİ ================= -->
+    <div id="sectionPortfolios" class="space-y-3 pt-1 hidden">
+        {% if results and results|length > 0 %}
+            {% for p in results %}
+            <div class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-14 h-14 rounded-2xl bg-slate-100 overflow-hidden shrink-0 border border-slate-100">
+                            <img src="{{ p.ana_fotograf or 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=300&q=80' }}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-xs font-black text-slate-900 truncate">{{ p.gayrimenkul_tipi }} - {{ p.ilce }}</h3>
+                            <p class="text-[10px] text-slate-400 font-semibold truncate mt-0.5">
+                                Danışman: {{ p.users.ad_soyad if p.users else 'Meslektaş' }}
+                            </p>
+                            <span class="inline-block text-xs font-black theme-text-dark mt-1">
+                                {{ '{:,}'.format(p.fiyat).replace(',', '.') if p.fiyat else '0' }} TL
+                            </span>
+                        </div>
+                    </div>
+
+                    <span class="px-2 py-0.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-800 shrink-0">
+                        %{{ p.match_score }} Uyum
+                    </span>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-[10px] text-slate-500 font-bold">{{ p.oda or '-' }} • {{ p.m2 or '-' }} m²</span>
+                    <a href="/messages/{{ p.users.id if p.users else '' }}" class="px-3.5 py-1.5 theme-bg-light hover:theme-bg-primary hover:text-white theme-text-dark text-[11px] font-black rounded-xl transition border theme-border-light active:scale-95">
+                        Mesaj Gönder ›
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-8 text-center text-xs text-slate-400 space-y-1">
+                <p class="font-bold text-slate-700">Eşleşen Meslektaş Portföyü Bulunamadı</p>
+                <p class="text-[11px]">Bölgedeki danışmanlar bu kriterlerde portföy sunduğunda liste güncellenecektir.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function switchResultTab(tabName) {
+        const btnProjects = document.getElementById('btnTabProjects');
+        const btnPortfolios = document.getElementById('btnTabPortfolios');
+        const secProjects = document.getElementById('sectionProjects');
+        const secPortfolios = document.getElementById('sectionPortfolios');
+
+        if (tabName === 'projects') {
+            btnProjects.className = 'py-2.5 rounded-xl transition-all duration-150 theme-bg-primary text-white shadow-sm';
+            btnPortfolios.className = 'py-2.5 rounded-xl transition-all duration-150 theme-text-dark hover:bg-white/50';
+            secProjects.classList.remove('hidden');
+            secPortfolios.classList.add('hidden');
+        } else {
+            btnPortfolios.className = 'py-2.5 rounded-xl transition-all duration-150 theme-bg-primary text-white shadow-sm';
+            btnProjects.className = 'py-2.5 rounded-xl transition-all duration-150 theme-text-dark hover:bg-white/50';
+            secPortfolios.classList.remove('hidden');
+            secProjects.classList.add('hidden');
+        }
+    }
+</script>
+{% endblock %}

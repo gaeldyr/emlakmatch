@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}Ağım & Topluluk - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-16 max-w-md mx-auto">
+    <!-- Üst Başlık -->
+    <div class="flex items-center justify-between pt-1 pb-1">
+        <div>
+            <h1 class="text-base font-black text-slate-900 tracking-tight">İş Ortağı Ağım</h1>
+            <p class="text-[11px] text-slate-400 font-medium">Ofisiniz, B2B gruplarınız ve meslektaş ağınız</p>
+        </div>
+        <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/dashboard';}" class="p-1 -mr-1 text-slate-500 hover:text-slate-800 transition">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+    </div>
+
+    <!-- 3 SEKMELİ GEÇİŞ (OFİSİM, GRUPLAR, MESLEKTAŞLARIM) -->
+    <div class="grid grid-cols-3 p-1 theme-bg-light rounded-2xl border theme-border-light text-xs font-black text-center">
+        <a href="/network?tab=ofisim" class="py-2 rounded-xl transition-all duration-150 {% if tab == 'ofisim' %}theme-bg-primary text-white shadow-sm{% else %}theme-text-dark hover:bg-white/50{% endif %}">
+            Ofisim
+        </a>
+        <a href="/network?tab=gruplar" class="py-2 rounded-xl transition-all duration-150 {% if tab == 'gruplar' %}theme-bg-primary text-white shadow-sm{% else %}theme-text-dark hover:bg-white/50{% endif %}">
+            Gruplar ({{ my_groups|length }})
+        </a>
+        <a href="/network?tab=meslektaslarim" class="py-2 rounded-xl transition-all duration-150 {% if tab == 'meslektaslarim' %}theme-bg-primary text-white shadow-sm{% else %}theme-text-dark hover:bg-white/50{% endif %}">
+            Ağ Ortakları
+        </a>
+    </div>
+
+    <!-- ================= 1. SEKME: OFİSİM ================= -->
+    {% if tab == 'ofisim' %}
+        <div class="space-y-4">
+            
+            {% if office %}
+                <!-- A. MEVCUT OFİS PANELİ -->
+                <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4">
+                    <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+                        <div>
+                            <span class="text-[9px] font-black uppercase tracking-wider theme-text-dark theme-bg-light px-2 py-0.5 rounded-md border theme-border-light">
+                                {% if user.office_role == 'founder' %}Kurucusu Olduğunuz Ofis{% else %}Kayıtlı Olduğunuz Ofis{% endif %}
+                            </span>
+                            <h2 class="text-sm font-black text-slate-900 mt-1.5">{{ office.ad }}</h2>
+                            <p class="text-[11px] text-slate-400 font-semibold">{{ office.ilce }}, {{ office.sehir or 'İstanbul' }}</p>
+                        </div>
+                        
+                        <!-- Ağdan Üye Davet Et Butonu (Herkes Kendi Ağını Davet Edebilir) -->
+                        <button type="button" onclick="openInviteModal()" class="px-3 py-1.5 theme-bg-primary theme-hover-bg text-white text-[11px] font-black rounded-xl shadow-xs transition active:scale-95 flex items-center gap-1">
+                            <span>+</span> <span>Ağından Davet Et</span>
+                        </button>
+                    </div>
+
+                    <!-- Ofis Üyeleri Listesi -->
+                    <div class="space-y-2">
+                        <span class="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">Ofis Danışmanları ({{ office_members|length }})</span>
+                        
+                        <div class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                            {% for m in office_members %}
+                            <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-xs theme-text-dark shrink-0 overflow-hidden">
+                                        {% if m.profil_foto %}
+                                            <img src="{{ m.profil_foto }}" class="w-full h-full object-cover">
+                                        {% else %}
+                                            {{ (m.ad_soyad[:2] if m.ad_soyad else 'OF').upper() }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-1.5">
+                                            <h4 class="text-xs font-black text-slate-900 truncate">{{ m.ad_soyad }}</h4>
+                                            {% if m.office_role == 'founder' %}
+                                            <span class="text-[8px] font-black bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded-md">Kurucu</span>
+                                            {% endif %}
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 font-mono">{{ m.telefon or m.eposta }}</p>
+                                    </div>
+                                </div>
+
+                                <!-- Eylemler: Mesajlaş ve Kurucu için 'Ofisten Çıkar' -->
+                                <div class="flex items-center gap-1 shrink-0">
+                                    {% if m.id|string != user.id|string %}
+                                    <a href="/messages/{{ m.id }}" class="p-2 rounded-xl bg-white hover:bg-slate-200 text-slate-600 border border-slate-200 transition" title="Mesaj Yaz">
+                                        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                    </a>
+                                    {% endif %}
+
+                                    {% if user.office_role == 'founder' and m.id|string != user.id|string %}
+                                    <form action="/network/offices/remove-member/{{ m.id }}" method="POST" onsubmit="return confirm('{{ m.ad_soyad }} isimli danışmanı ofisten çıkarmak istediğinize emin misiniz?');">
+                                        <button type="submit" class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition text-[10px] font-bold" title="Ofisten Çıkar">
+                                            ✕ Çıkar
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Ofis Yönetim Alt Butonları -->
+                    <div class="pt-3 border-t border-slate-100">
+                        {% if user.office_role == 'founder' %}
+                        <form action="/network/offices/close" method="POST" onsubmit="return confirm('DİKKAT: Ofisi kapatmak üzeresiniz. Tüm üyelerin ofis bağlantısı sonlandırılacaktır. Emin misiniz?');">
+                            <button type="submit" class="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-xs rounded-xl border border-rose-200 transition active:scale-98">
+                                ✕ Ofisi Kapat ve Dağıt
+                            </button>
+                        </form>
+                        {% else %}
+                        <form action="/network/offices/leave" method="POST" onsubmit="return confirm('Ofisten ayrılmak istediğinize emin misiniz?');">
+                            <button type="submit" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition active:scale-98">
+                                ⊘ Ofisten Ayrıl
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {% else %}
+                <!-- B. OFİSİ OLMAYANLAR İÇİN: BEKLEYEN DAVETLER VEYA YENİ OFİS KURMA -->
+                
+                <!-- Gelen Ofis Davetleri -->
+                {% if pending_office_invites and pending_office_invites|length > 0 %}
+                <div class="bg-white rounded-3xl p-4 border border-amber-200 shadow-2xs space-y-3">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-amber-800 block">Bekleyen Ofis Daveti</span>
+                    {% for inv in pending_office_invites %}
+                    <div class="p-3 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-black text-slate-900">{{ inv.offices.ad if inv.offices else 'Ofis' }}</h4>
+                            <span class="text-[9px] font-bold text-amber-700 font-mono">{{ inv.offices.ilce if inv.offices else '' }}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-600">{{ inv.sender.ad_soyad if inv.sender else 'Meslektaşınız' }} sizi ofis ekibine davet etti.</p>
+                        
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <form action="/network/offices/respond-invite/{{ inv.id }}" method="POST">
+                                <input type="hidden" name="action" value="accept">
+                                <button type="submit" class="w-full py-2 theme-bg-primary text-white font-black text-xs rounded-xl shadow-xs transition">
+                                    ✓ Katıl
+                                </button>
+                            </form>
+                            <form action="/network/offices/respond-invite/{{ inv.id }}" method="POST">
+                                <input type="hidden" name="action" value="reject">
+                                <button type="submit" class="w-full py-2 bg-white text-slate-600 border border-slate-200 font-bold text-xs rounded-xl transition">
+                                    ✕ Reddet
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Yeni Ofis Kur Formu -->
+                <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4">
+                    <div class="text-center space-y-1 pb-1 border-b border-slate-100">
+                        <div class="w-12 h-12 rounded-2xl theme-bg-light theme-text-dark flex items-center justify-center mx-auto border theme-border-light text-xl">
+                            🏢
+                        </div>
+                        <h3 class="text-xs font-black text-slate-900">Kendi Ofisinizi Kurun</h3>
+                        <p class="text-[10px] text-slate-400">Bir ofis oluşturarak kendi ağınızdaki emlakçıları ekibinize toplayabilirsiniz.</p>
+                    </div>
+
+                    <form action="/network/offices/create" method="POST" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Ofis Ticari Adı *</label>
+                            <input type="text" name="ad" required placeholder="Örn: Emlak Port Beşiktaş Şubesi" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:theme-border-primary">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Şehir</label>
+                                <input type="text" name="sehir" value="İstanbul" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">İlçe *</label>
+                                <input type="text" name="ilce" required placeholder="Örn: Beşiktaş" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:theme-border-primary">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Adres / Lokasyon</label>
+                            <input type="text" name="adres" placeholder="Mahalle, cadde veya iş merkezi bilgisi" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none">
+                        </div>
+
+                        <button type="submit" class="w-full py-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl shadow-xs transition active:scale-98">
+                            Ofisimi Oluştur
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+
+        </div>
+    {% endif %}
+
+    <!-- ================= 2. SEKME: GRUPLAR ================= -->
+    {% if tab == 'gruplar' %}
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold uppercase text-slate-400">Üye Olduğunuz Gruplar</span>
+                <button onclick="document.getElementById('createGroupModal').classList.remove('hidden')" class="text-xs font-black theme-text-dark theme-bg-light px-2.5 py-1 rounded-xl border theme-border-light">
+                    + Grup Kur
+                </button>
+            </div>
+
+            <div class="space-y-2.5">
+                {% for g in my_groups %}
+                <a href="/network/groups/{{ g.id }}" class="block p-4 bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:theme-border-primary transition">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xs font-black text-slate-900">{{ g.ad }}</h3>
+                            <p class="text-[10px] text-slate-400 mt-0.5">{{ g.ilce or 'Tüm Şehir' }} • {{ g.members_count }} Danışman</p>
+                        </div>
+                        <span class="text-xs theme-text-primary font-bold">Giriş ›</span>
+                    </div>
+                </a>
+                {% else %}
+                <div class="p-8 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400">
+                    Henüz bir B2B grubuna üye değilsiniz.
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if available_groups and available_groups|length > 0 %}
+            <div class="pt-2 space-y-2">
+                <span class="text-[10px] font-extrabold uppercase text-slate-400">Katılabileceğiniz Gruplar</span>
+                {% for ag in available_groups %}
+                <div class="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-900">{{ ag.ad }}</h4>
+                        <p class="text-[10px] text-slate-400">{{ ag.members_count }} Üye</p>
+                    </div>
+                    <form action="/network/groups/join/{{ ag.id }}" method="POST">
+                        <button type="submit" class="px-3 py-1.5 theme-bg-light theme-text-dark border theme-border-light font-bold text-[11px] rounded-xl">Katıl</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- ================= 3. SEKME: MESLEKTAŞLARIM (AĞ ORTAKLARI) ================= -->
+    {% if tab == 'meslektaslarim' %}
+        <div class="space-y-3">
+            <span class="text-[10px] font-extrabold uppercase text-slate-400 block">Doğrudan İş Ortaklarınız ({{ partners|length }})</span>
+            
+            <div class="space-y-2">
+                {% for p in partners %}
+                <div class="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-xl theme-bg-light theme-text-dark font-black text-xs flex items-center justify-center border theme-border-light shrink-0 overflow-hidden">
+                            {% if p.profil_foto %}
+                                <img src="{{ p.profil_foto }}" class="w-full h-full object-cover">
+                            {% else %}
+                                {{ (p.ad_soyad[:2] if p.ad_soyad else 'EM').upper() }}
+                            {% endif %}
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-black text-slate-900 truncate">{{ p.ad_soyad }}</h4>
+                            <p class="text-[10px] text-slate-400 truncate">{{ p.sirket_unvani or 'Gayrimenkul Danışmanı' }}</p>
+                            <span class="text-[9px] theme-text-primary font-bold">{{ p.port_count }} Aktif Portföy</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <a href="/messages/{{ p.id }}" class="p-2 rounded-xl theme-bg-light theme-text-dark border theme-border-light text-xs font-bold" title="Mesaj Yaz">
+                            💬
+                        </a>
+                        <a href="/profile/view/{ p.id }}" class="p-2 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 text-xs font-bold">
+                            Profil
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-8 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400">
+                    Henüz doğrudan ağ ortağınız bulunmuyor. Meslektaşlarınızı davet kodunuzla üye yaparak otomatik ağınıza katabilirsiniz.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- ================= AĞDAN OFİSE DAVET ETME MODALI ================= -->
+<div id="inviteToOfficeModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-4 shadow-2xl border-t theme-border-primary">
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto"></div>
+        
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+                <h3 class="text-xs font-black text-slate-900">Ağındaki Danışmanı Ofise Davet Et</h3>
+                <p class="text-[10px] text-slate-400">Sadece doğrudan ağınızdaki boşta olan emlakçılar listelenir.</p>
+            </div>
+            <button type="button" onclick="closeInviteModal()" class="text-slate-400 text-lg font-bold">✕</button>
+        </div>
+
+        <div class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+            {% if invitable_partners and invitable_partners|length > 0 %}
+                {% for ag in invitable_partners %}
+                <form action="/network/offices/invite" method="POST" class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+                    <input type="hidden" name="target_agent_id" value="{{ ag.id }}">
+                    <div class="min-w-0 pr-2">
+                        <span class="text-xs font-black text-slate-900 block truncate">{{ ag.ad_soyad }}</span>
+                        <span class="text-[10px] text-slate-400 block truncate">{{ ag.sirket_unvani or 'Danışman' }}</span>
+                    </div>
+                    <button type="submit" class="px-3 py-1.5 theme-bg-primary text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95 shrink-0">
+                        Davet Gönder
+                    </button>
+                </form>
+                {% endfor %}
+            {% else %}
+                <div class="py-8 text-center text-xs text-slate-400">
+                    Ağınızda şu anda ofisi olmayan davet edilebilir bir meslektaşınız bulunmuyor.
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="button" onclick="closeInviteModal()" class="w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs">
+            Kapat
+        </button>
+    </div>
+</div>
+
+<script>
+    function openInviteModal() {
+        document.getElementById('inviteToOfficeModal').classList.remove('hidden');
+    }
+    function closeInviteModal() {
+        document.getElementById('inviteToOfficeModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

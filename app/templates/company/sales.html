@@ -1,0 +1,164 @@
+{% extends "company/layout.html" %}
+
+{% block title %}Satış Yönetimi - Proje Yönetim Konsolu{% endblock %}
+{% block header_title %}Satış & Sözleşme Operasyonları{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Üst 3'lü Özet Barı -->
+    <div class="grid grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block uppercase tracking-wide">Kapanan Toplam Satış</span>
+            <span class="text-2xl font-black text-slate-900 block mt-1">{{ sales_records|length }} Adet İşlem</span>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block uppercase tracking-wide">Toplam Satış Hacmi (Ciro)</span>
+            <span class="text-xl font-black text-slate-900 block mt-1">{{ '{:,}'.format(total_volume).replace(',', '.') }} TL</span>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block uppercase tracking-wide">Danışman Komisyon Hakedişleri</span>
+            <span class="text-xl font-black text-emerald-700 block mt-1">{{ '{:,}'.format(total_commission).replace(',', '.') }} TL</span>
+        </div>
+    </div>
+
+    <!-- Satış & Rezervasyon Listesi -->
+    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden space-y-4 p-5">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-sm font-black text-slate-900 tracking-tight">Rezervasyon & Satış Kayıtları</h3>
+                <p class="text-xs text-slate-400">Emlakçı yönlendirmesiyle kapatılan veya opsiyonlanan üniteler</p>
+            </div>
+        </div>
+
+        {% if sales_records and sales_records|length > 0 %}
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-[10px] font-black text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
+                        <th class="py-3 px-4">Tescil No & Alıcı</th>
+                        <th class="py-3 px-4">Proje</th>
+                        <th class="py-3 px-4">Yönlendiren Broker</th>
+                        <th class="py-3 px-4">Satılan Ünite</th>
+                        <th class="py-3 px-4">Satış Bedeli</th>
+                        <th class="py-3 px-4">Danışman Komisyonu</th>
+                        <th class="py-3 px-4 text-center">Durum</th>
+                        <th class="py-3 px-4 text-right">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody class="text-xs font-bold text-slate-700 divide-y divide-slate-100">
+                    {% for s in sales_records %}
+                    {% set proje_adi = s.projects.ad if (s.projects and s.projects.ad) else "Proje" %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4">
+                            <span class="font-mono text-[10px] text-slate-400 block">{{ s.tescil_no }}</span>
+                            <span class="font-black text-slate-900 block mt-0.5">{{ s.musteri_ad_soyad }}</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="font-extrabold text-slate-900 block">{{ proje_adi }}</span>
+                            <span class="text-[10px] text-slate-400">{{ s.projects.ilce if s.projects else "" }}</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="font-extrabold text-slate-900 block">{{ s.users.ad_soyad if s.users else '-' }}</span>
+                            <span class="text-[10px] text-slate-400">{{ s.users.sirket_unvani or 'Broker' }}</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="font-mono font-bold text-slate-800">{{ s.satilan_unite_bilgisi or 'Girilmedi' }}</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="font-black text-slate-900">
+                                {% if s.gerceklesen_satis_bedeli %}{{ '{:,}'.format(s.gerceklesen_satis_bedeli).replace(',', '.') }} TL{% else %}-{% endif %}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="font-black text-emerald-700">
+                                {% if s.hesaplanan_komisyon %}{{ '{:,}'.format(s.hesaplanan_komisyon).replace(',', '.') }} TL{% else %}-{% endif %}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            {% set st = s.durum|lower %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black {% if st in ['satış yapıldı', 'satis yapildi', 'tamamlandı'] %}bg-emerald-100 text-emerald-800 border border-emerald-200{% else %}bg-purple-50 text-purple-700 border border-purple-200{% endif %}">
+                                {{ s.durum }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            {% if s.durum != 'Satış Yapıldı' %}
+                            <button type="button" 
+                                    data-reg-id="{{ s.id }}"
+                                    data-customer="{{ s.musteri_ad_soyad }}"
+                                    data-project="{{ proje_adi }}"
+                                    onclick="openFinalizeModalFromBtn(this)"
+                                    class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] rounded-xl transition shadow-2xs">
+                                Satışı Kapat ›
+                            </button>
+                            {% else %}
+                            <span class="text-[11px] text-slate-400 font-bold">✓ Mutabakat Sağlandı</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-16 text-center text-xs text-slate-400">
+            Henüz satış veya rezervasyon aşamasında bir kayıt bulunmuyor.
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Satış Kapatma Modalı -->
+<div id="finalizeModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center hidden">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4 border border-slate-200">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h4 class="text-sm font-black text-slate-900">Satışı Onayla & Komisyonu Kilitle</h4>
+            <button type="button" onclick="closeFinalizeModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">✕</button>
+        </div>
+
+        <p class="text-xs text-slate-500">
+            <strong id="modalCustomerName" class="text-slate-800"></strong> isimli müşterinin 
+            <strong id="modalProjectName" class="text-slate-800"></strong> satışını tamamlayın.
+        </p>
+
+        <form action="/company/sales/finalize" method="POST" class="space-y-3.5 text-xs">
+            <input type="hidden" name="registration_id" id="modalRegId">
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Satılan Bağımsız Bölüm / Ünite No *</label>
+                <input type="text" name="satilan_unite_bilgisi" required placeholder="Örn: B Blok Daire 14 (3+1)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Gerçekleşen Satış Bedeli (TL) *</label>
+                <input type="number" name="gerceklesen_satis_bedeli" required placeholder="Örn: 22500000" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <p class="text-[10px] text-emerald-700 font-semibold mt-1">Belirlediğiniz komisyon oranı otomatik hesaplanarak danışmana hakediş olarak iletilecektir.</p>
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl transition shadow-xs">
+                    Satışı Onayla & İşlemi Tamamla
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openFinalizeModalFromBtn(btn) {
+        const regId = btn.getAttribute('data-reg-id');
+        const custName = btn.getAttribute('data-customer');
+        const projName = btn.getAttribute('data-project');
+
+        document.getElementById('modalRegId').value = regId;
+        document.getElementById('modalCustomerName').innerText = custName;
+        document.getElementById('modalProjectName').innerText = projName;
+        document.getElementById('finalizeModal').classList.remove('hidden');
+    }
+
+    function closeFinalizeModal() {
+        document.getElementById('finalizeModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

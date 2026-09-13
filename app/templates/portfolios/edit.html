@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Portföyü Düzenle - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-[85vh] flex flex-col justify-between">
+    <div>
+        <!-- Geri Butonu -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <a href="/portfolios/my" class="text-slate-500 hover:text-slate-800">
+                <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            </a>
+            <h1 class="text-sm font-extrabold text-slate-900 tracking-tight">Portföyü Düzenle</h1>
+            <div class="w-6"></div>
+        </div>
+
+        <form id="editForm" action="/portfolios/edit/{{ portfolio.id }}" method="POST" class="space-y-4 mt-4">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Mülk Konumu (Sabit)</label>
+                <input type="text" disabled value="{{ portfolio.il }} / {{ portfolio.ilce }} {% if portfolio.mahalle_site %}({{ portfolio.mahalle_site }}){% endif %}" class="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-500">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Fiyat (TL)</label>
+                <input type="number" name="fiyat" required value="{{ portfolio.fiyat }}" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Oda Sayısı</label>
+                    <input type="text" name="oda" value="{{ portfolio.oda or '' }}" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">m²</label>
+                    <input type="number" name="m2" value="{{ portfolio.m2 or '' }}" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Yayın Durumu</label>
+                <select name="durum" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <option value="Aktif" {% if portfolio.durum == 'Aktif' %}selected{% endif %}>Aktif (Yayında)</option>
+                    <option value="Pasif" {% if portfolio.durum == 'Pasif' %}selected{% endif %}>Pasif (Gizli)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Açıklama / Donatılar</label>
+                <textarea name="kisa_aciklama" rows="3" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">{{ portfolio.kisa_aciklama or '' }}</textarea>
+            </div>
+        </form>
+    </div>
+
+    <div class="pt-4 pb-2">
+        <button type="button" onclick="document.getElementById('editForm').submit()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-sm">
+            Değişiklikleri Kaydet
+        </button>
+    </div>
+</div>
+{% endblock %}

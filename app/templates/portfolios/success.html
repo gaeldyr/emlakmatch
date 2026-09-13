@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Talep İletildi - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-[85vh] flex flex-col justify-between py-6">
+    <div class="text-center space-y-4 my-auto">
+        <div class="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-sm border border-emerald-200">
+            <svg class="w-8 h-8 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+        </div>
+
+        <div class="space-y-1.5">
+            <h1 class="text-lg font-black text-slate-900 tracking-tight">Ortak Satış Talebi İletildi</h1>
+            <p class="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                Talebiniz <strong class="text-slate-800">{{ agent_name }}</strong> adlı meslektaşınıza başarıyla ulaştırıldı.
+            </p>
+        </div>
+
+        <div class="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-2xl max-w-xs mx-auto text-left text-xs space-y-1">
+            <div class="flex justify-between">
+                <span class="text-slate-500">Portföy:</span>
+                <span class="font-extrabold text-slate-800">{{ portfolio.gayrimenkul_tipi }} - {{ portfolio.ilce }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-500">Model:</span>
+                <span class="font-black text-emerald-800">Ortak Satış</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-2">
+        <a href="/collaborations/my?tab=bekleyen" class="block w-full text-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl text-xs transition shadow-sm active:scale-[0.99]">
+            İşbirliklerim Ekranına Git
+        </a>
+        <a href="/dashboard" class="block w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-xs transition">
+            Ana Sayfaya Dön
+        </a>
+    </div>
+</div>
+{% endblock %}

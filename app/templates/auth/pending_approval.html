@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Başvurunuz Alındı - EMLAKMATCH{% endblock %}
+
+{% block bottom_nav %}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-[85vh] flex flex-col justify-between py-6">
+    <div class="text-center space-y-4 my-auto">
+        <!-- Yeşil Onay İkonu -->
+        <div class="w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100 shadow-sm">
+            <svg class="w-10 h-10 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        </div>
+
+        <div class="space-y-2">
+            <h1 class="text-xl font-black text-slate-900 tracking-tight">Başvurunuz alındı!</h1>
+            <p class="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                Profiliniz ve yetki belgeniz kontrol edildikten sonra Emlakçı Ağı'na giriş yapabileceksiniz.
+            </p>
+            <p class="text-[11px] font-semibold text-emerald-700">
+                Size en kısa sürede dönüş yapacağız.
+            </p>
+        </div>
+    </div>
+
+    <div>
+        <a href="/login" class="block w-full text-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-xs transition shadow-sm active:scale-[0.99]">
+            Giriş Ekranına Dön
+        </a>
+    </div>
+</div>
+{% endblock %}

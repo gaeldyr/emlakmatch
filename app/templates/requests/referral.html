@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Müşterimi Yönlendir - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto space-y-4 pb-12">
+    <!-- Üst Başlık -->
+    <div class="flex items-center gap-3 pt-1 border-b border-slate-200/80 pb-2">
+        <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/dashboard';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div>
+            <h1 class="text-base font-black text-slate-900 tracking-tight">Müşterimi Yönlendir</h1>
+            <p class="text-[11px] text-slate-500">Müşterinizi bölge uzmanı meslektaşınıza güvenle paslayın.</p>
+        </div>
+    </div>
+
+    <!-- Bilgi Kutusu -->
+    <div class="p-3 theme-bg-light border theme-border-light rounded-2xl flex items-start gap-2.5 shadow-2xs">
+        <div class="w-5 h-5 rounded-lg bg-white theme-text-primary flex items-center justify-center shrink-0 mt-0.5 border theme-border-light">
+            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <p class="text-[11px] text-slate-700 font-medium leading-relaxed">
+            <strong class="font-black theme-text-dark">Korumalı Müşteri Yönlendirme:</strong> Müşteri iletişim bilgileri, hedef danışman şartlarınızı kabul edene kadar sistemde maskeli tutulur.
+        </p>
+    </div>
+
+    <!-- Yönlendirme Formu -->
+    <form id="referralForm" action="/requests/referral/find-agents" method="POST" class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3.5">
+        
+        <!-- Müşteri Adı Soyadı -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1 uppercase tracking-wider">Müşteri Adı Soyadı *</label>
+            <input type="text" name="musteri_ad_soyad" required value="{{ client.musteri_ad_soyad if client else '' }}" placeholder="Örn: Ahmet Yılmaz" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:ring-2 focus:theme-border-primary focus:bg-white focus:outline-none shadow-2xs transition">
+        </div>
+
+        <!-- Telefon ve E-Posta -->
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-[11px] font-extrabold text-slate-700 mb-1 uppercase tracking-wider">Telefon *</label>
+                <input type="tel" name="musteri_telefon" required value="{{ client.musteri_telefon if client else '' }}" placeholder="0532..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:ring-2 focus:theme-border-primary focus:bg-white focus:outline-none shadow-2xs transition">
+            </div>
+            <div>
+                <label class="block text-[11px] font-extrabold text-slate-700 mb-1 uppercase tracking-wider">E-Posta</label>
+                <input type="email" name="musteri_eposta" value="{{ client.musteri_eposta if client else '' }}" placeholder="Opsiyonel" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:ring-2 focus:theme-border-primary focus:bg-white focus:outline-none shadow-2xs transition">
+            </div>
+        </div>
+
+        <!-- Kompakt İl & İlçe Seçimi -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1 uppercase tracking-wider">Aranan Bölge *</label>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="hidden" name="il" id="realCityInput" value="{{ client.il if client else 'İstanbul' }}">
+                <input type="hidden" name="ilce" id="realDistrictInput" value="{{ client.ilce if client else 'Beykoz' }}">
+
+                <div onclick="openLocationDrawer('city')" class="p-2.5 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs group">
+                    <span class="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">İl</span>
+                    <span id="displayCityText" class="text-xs font-black text-slate-800 group-hover:theme-text-primary transition truncate block">{{ client.il if client else 'İstanbul' }}</span>
+                </div>
+
+                <div onclick="openLocationDrawer('district')" class="p-2.5 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs group">
+                    <span class="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">İlçe</span>
+                    <span id="displayDistrictText" class="text-xs font-black text-slate-800 group-hover:theme-text-primary transition truncate block">{{ client.ilce if client else 'Beykoz' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gayrimenkul Tipi -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1 uppercase tracking-wider">Gayrimenkul Tipi *</label>
+            <input type="hidden" name="gayrimenkul_tipi" id="realTypeInput" value="{{ client.gayrimenkul_tipi if client else 'Villa' }}">
+
+            <div onclick="openTypeDrawer()" class="p-2.5 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-2xl cursor-pointer transition shadow-2xs flex items-center justify-between group">
+                <div>
+                    <span class="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Seçilen Tip</span>
+                    <span id="displayTypeText" class="text-xs font-black text-slate-800 group-hover:theme-text-primary transition">{{ client.gayrimenkul_tipi if client else 'Villa' }}</span>
+                </div>
+                <span class="text-slate-400 text-xs font-bold group-hover:theme-text-primary transition">Değiştir ›</span>
+            </div>
+        </div>
+
+        <!-- Müşterinin Yaklaşık Bütçesi -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1 uppercase tracking-wider">Müşterinin Yaklaşık Bütçesi (TL)</label>
+            <input type="text" id="displayButce" placeholder="Örn: 25.000.000" oninput="formatPriceField(this)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:ring-2 focus:theme-border-primary focus:bg-white focus:outline-none shadow-2xs transition">
+            <input type="hidden" name="musteri_butcesi" id="realButceInput" value="{{ client.musteri_butcesi if client else '0' }}">
+        </div>
+
+        <!-- İKİ PARÇALI KOMİSYON PAYLAŞIMI -->
+        <div>
+            <div class="flex items-center justify-between mb-1">
+                <label class="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Komisyon Paylaşım Şartınız *</label>
+                <span id="commissionTotalBadge" class="text-[10px] font-extrabold theme-text-dark theme-bg-light px-2 py-0.5 rounded-md border theme-border-light">Toplam %100</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2">
+                <!-- 1. Yönlendiren Payı -->
+                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl shadow-2xs">
+                    <span class="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider mb-1">Yönlendiren Payı (%)</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-black theme-text-primary">%</span>
+                        <input type="number" id="senderRateInput" min="0" max="100" value="30" oninput="handleCommissionChange('sender')" class="w-full text-xs font-black text-slate-900 bg-transparent focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- 2. Kapatan Meslektaş Payı -->
+                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl shadow-2xs">
+                    <span class="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider mb-1">Kapatan Payı (%)</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-black theme-text-primary">%</span>
+                        <input type="number" id="closerRateInput" min="0" max="100" value="70" oninput="handleCommissionChange('closer')" class="w-full text-xs font-black text-slate-900 bg-transparent focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gizli Tekil Input -->
+            <input type="hidden" name="isbirligi_kosulu" id="finalCommissionCondition" value="%30 (Yönlendiren) - %70 (Kapatan)">
+
+            <!-- %100'ü Geçince Çıkan Uyarı Mesajı -->
+            <p id="commissionErrorMsg" class="text-[10px] text-rose-600 font-extrabold mt-1.5 hidden flex items-center gap-1">
+                <span>✕</span> <span>Yönlendiren ve kapatan paylarının toplamı %100'ü geçemez!</span>
+            </p>
+        </div>
+
+        <!-- Özel Müşteri Notu -->
+        <div>
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1 uppercase tracking-wider">Özel Müşteri Notu</label>
+            <textarea name="ek_not" rows="2" placeholder="Müşterinin özel kriterleri, aciliyeti..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 focus:ring-2 focus:theme-border-primary focus:bg-white focus:outline-none shadow-2xs transition">{{ client.ek_not if client else '' }}</textarea>
+        </div>
+
+        <!-- Gönder Butonu -->
+        <button type="submit" id="btnSubmitReferral" class="w-full theme-bg-primary theme-hover-bg disabled:bg-slate-300 disabled:cursor-not-allowed active:scale-[0.99] text-white font-black py-3.5 rounded-2xl text-xs transition shadow-md mt-2 flex items-center justify-center gap-1.5">
+            <span>Bölgedeki Uzmanları Bul</span>
+            <span>›</span>
+        </button>
+    </form>
+
+    <!-- Bulunan Uzmanlar Listesi -->
+    {% if agents is defined %}
+    <div class="space-y-3 pt-2">
+        <div class="flex items-center justify-between px-1">
+            <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">{{ client.ilce }} Bölgesinde {{ agents|length }} Danışman Bulundu</h3>
+        </div>
+
+        {% if agents and agents|length > 0 %}
+            <div class="space-y-2.5">
+                {% for a in agents %}
+                <div class="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-11 h-11 rounded-xl theme-bg-light theme-text-dark font-extrabold text-xs flex items-center justify-center shrink-0 border theme-border-light overflow-hidden">
+                            {% if a.profil_foto %}
+                                <img src="{{ a.profil_foto }}" class="w-full h-full object-cover">
+                            {% else %}
+                                {{ (a.ad_soyad[:2] if a.ad_soyad else 'EM').upper() }}
+                            {% endif %}
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ a.ad_soyad }}</h4>
+                            <p class="text-[10px] text-slate-500 truncate">{{ a.sirket_unvani or 'Broker' }}</p>
+                            <span class="inline-block mt-0.5 text-[9px] font-extrabold theme-text-dark theme-bg-light px-1.5 py-0.2 rounded border theme-border-light">
+                                %{{ a.score }} Uygunluk
+                            </span>
+                        </div>
+                    </div>
+
+                    <form action="/requests/referral/send" method="POST" class="shrink-0">
+                        <input type="hidden" name="target_agent_id" value="{{ a.id }}">
+                        <input type="hidden" name="musteri_ad_soyad" value="{{ client.musteri_ad_soyad }}">
+                        <input type="hidden" name="musteri_telefon" value="{{ client.musteri_telefon }}">
+                        <input type="hidden" name="musteri_eposta" value="{{ client.musteri_eposta or '' }}">
+                        <input type="hidden" name="il" value="{{ client.il }}">
+                        <input type="hidden" name="ilce" value="{{ client.ilce }}">
+                        <input type="hidden" name="gayrimenkul_tipi" value="{{ client.gayrimenkul_tipi }}">
+                        <input type="hidden" name="musteri_butcesi" value="{{ client.musteri_butcesi }}">
+                        <input type="hidden" name="isbirligi_kosulu" value="{{ client.isbirligi_kosulu }}">
+                        <input type="hidden" name="ek_not" value="{{ client.ek_not or '' }}">
+                        <button type="submit" class="px-3 py-2 theme-bg-primary theme-hover-bg text-white font-bold text-xs rounded-xl transition shadow-2xs active:scale-95">
+                            Yönlendir
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400">
+                Seçilen bölgede aktif danışman bulunamadı.
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- ================= 1. ALTTAN AÇILIR İL/İLÇE ÇEKMECESİ ================= -->
+<div id="locationPickerDrawer" onclick="closeLocationDrawer()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="locationDrawerContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-3.5 shadow-2xl border-t theme-border-primary transform translate-y-full transition-transform duration-300 max-h-[80vh] flex flex-col justify-between">
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto"></div>
+
+        <div>
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 id="locationDrawerTitle" class="text-xs font-black theme-text-dark uppercase tracking-tight">İl Seçiniz</h3>
+                <button type="button" onclick="closeLocationDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+            <div class="mt-2.5">
+                <input type="text" id="drawerSearchInput" oninput="filterDrawerOptions()" placeholder="Listede ara..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:theme-border-primary shadow-2xs">
+            </div>
+        </div>
+
+        <div id="drawerOptionsList" class="flex-1 overflow-y-auto space-y-1.5 pr-1 py-1 custom-scrollbar"></div>
+
+        <button type="button" onclick="closeLocationDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition mt-2">
+            Vazgeç
+        </button>
+    </div>
+</div>
+
+<!-- ================= 2. ALTTAN AÇILIR GAYRİMENKUL TİPİ ÇEKMECESİ ================= -->
+<div id="typePickerDrawer" onclick="closeTypeDrawer()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="typeDrawerContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-3.5 shadow-2xl border-t theme-border-primary transform translate-y-full transition-transform duration-300">
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto"></div>
+
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h3 class="text-xs font-black theme-text-dark uppercase tracking-tight">Gayrimenkul Tipi Seçiniz</h3>
+            <button type="button" onclick="closeTypeDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+        </div>
+
+        <div class="space-y-1.5 py-1">
+            {% for t in ["Konut", "Daire", "Villa", "Ticari", "Arsa", "Rezidans", "Diğer"] %}
+            <button type="button" onclick="selectPropertyType('{{ t }}')" class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white hover:theme-bg-light text-slate-800 hover:theme-text-dark border border-slate-200 font-bold text-xs transition shadow-2xs">
+                <span>{{ t }}</span>
+            </button>
+            {% endfor %}
+        </div>
+
+        <button type="button" onclick="closeTypeDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition">
+            Vazgeç
+        </button>
+    </div>
+</div>
+
+<script id="turkeyDataJson" type="application/json">
+{{ turkey_data|tojson if turkey_data else '{}' }}
+</script>
+
+<script>
+    const rawDataEl = document.getElementById('turkeyDataJson');
+    let turkeyData = {};
+    try {
+        turkeyData = JSON.parse(rawDataEl.textContent || '{}');
+    } catch(e) {
+        turkeyData = { "İstanbul": ["Beşiktaş", "Beykoz", "Kadıköy", "Sarıyer"] };
+    }
+
+    let currentPickerMode = 'city';
+    let currentPool = [];
+
+    function openLocationDrawer(mode) {
+        currentPickerMode = mode;
+        const titleEl = document.getElementById('locationDrawerTitle');
+        const searchInput = document.getElementById('drawerSearchInput');
+        searchInput.value = '';
+
+        const collator = new Intl.Collator('tr');
+
+        if (mode === 'city') {
+            titleEl.innerText = 'İl Seçiniz';
+            currentPool = Object.keys(turkeyData).sort(collator.compare);
+        } else {
+            const selectedCity = document.getElementById('realCityInput').value || 'İstanbul';
+            titleEl.innerText = `${selectedCity} - İlçe Seçiniz`;
+            const rawDistricts = turkeyData[selectedCity] || ["Merkez"];
+            currentPool = [...rawDistricts].sort(collator.compare);
+        }
+
+        renderDrawerOptions(currentPool);
+
+        const drawer = document.getElementById('locationPickerDrawer');
+        const content = document.getElementById('locationDrawerContent');
+        drawer.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeLocationDrawer() {
+        const drawer = document.getElementById('locationPickerDrawer');
+        const content = document.getElementById('locationDrawerContent');
+        drawer.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function renderDrawerOptions(items) {
+        const container = document.getElementById('drawerOptionsList');
+        container.innerHTML = '';
+
+        const currentActive = (currentPickerMode === 'city') 
+            ? document.getElementById('realCityInput').value 
+            : document.getElementById('realDistrictInput').value;
+
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-xs text-slate-400">Eşleşen sonuç bulunamadı.</div>';
+            return;
+        }
+
+        items.forEach(item => {
+            const isSelected = (item.trim().toLocaleLowerCase('tr') === currentActive.trim().toLocaleLowerCase('tr'));
+            const optBtn = document.createElement('button');
+            optBtn.type = 'button';
+            optBtn.onclick = () => selectLocationItem(item);
+
+            if (isSelected) {
+                optBtn.className = 'w-full flex items-center justify-between p-3.5 rounded-2xl theme-bg-primary text-white font-black text-xs transition shadow-xs';
+                optBtn.innerHTML = `<span>${item}</span><span class="text-sm">✓</span>`;
+            } else {
+                optBtn.className = 'w-full flex items-center justify-between p-3.5 rounded-2xl bg-white hover:theme-bg-light text-slate-800 hover:theme-text-dark border border-slate-200/80 font-bold text-xs transition shadow-2xs';
+                optBtn.innerHTML = `<span>${item}</span>`;
+            }
+
+            container.appendChild(optBtn);
+        });
+    }
+
+    function filterDrawerOptions() {
+        const query = document.getElementById('drawerSearchInput').value.trim().toLocaleLowerCase('tr');
+        const filtered = currentPool.filter(it => it.toLocaleLowerCase('tr').includes(query));
+        renderDrawerOptions(filtered);
+    }
+
+    function selectLocationItem(val) {
+        if (currentPickerMode === 'city') {
+            document.getElementById('realCityInput').value = val;
+            document.getElementById('displayCityText').innerText = val;
+
+            const availableDistricts = turkeyData[val] || ["Merkez"];
+            const defaultDistrict = availableDistricts[0];
+            document.getElementById('realDistrictInput').value = defaultDistrict;
+            document.getElementById('displayDistrictText').innerText = defaultDistrict;
+        } else {
+            document.getElementById('realDistrictInput').value = val;
+            document.getElementById('displayDistrictText').innerText = val;
+        }
+        closeLocationDrawer();
+    }
+
+    // Gayrimenkul Tipi Çekmecesi
+    function openTypeDrawer() {
+        const drawer = document.getElementById('typePickerDrawer');
+        const content = document.getElementById('typeDrawerContent');
+        drawer.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeTypeDrawer() {
+        const drawer = document.getElementById('typePickerDrawer');
+        const content = document.getElementById('typeDrawerContent');
+        drawer.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function selectPropertyType(type) {
+        document.getElementById('realTypeInput').value = type;
+        document.getElementById('displayTypeText').innerText = type;
+        closeTypeDrawer();
+    }
+
+    // Fiyat Noktalama
+    function formatPriceField(input) {
+        let rawVal = input.value.replace(/\D/g, '');
+        document.getElementById('realButceInput').value = rawVal || '0';
+        if (rawVal) {
+            input.value = Number(rawVal).toLocaleString('tr-TR');
+        } else {
+            input.value = '';
+        }
+    }
+
+    // İki Parçalı Komisyon ve %100 Kontrolü
+    function handleCommissionChange(source) {
+        const senderInput = document.getElementById('senderRateInput');
+        const closerInput = document.getElementById('closerRateInput');
+        const totalBadge = document.getElementById('commissionTotalBadge');
+        const errorMsg = document.getElementById('commissionErrorMsg');
+        const submitBtn = document.getElementById('btnSubmitReferral');
+        const finalHidden = document.getElementById('finalCommissionCondition');
+
+        let sVal = parseInt(senderInput.value) || 0;
+        let cVal = parseInt(closerInput.value) || 0;
+
+        if (source === 'sender' && sVal <= 100) {
+            cVal = 100 - sVal;
+            closerInput.value = cVal;
+        } else if (source === 'closer' && cVal <= 100) {
+            sVal = 100 - cVal;
+            senderInput.value = sVal;
+        }
+
+        const total = sVal + cVal;
+        totalBadge.innerText = `Toplam %${total}`;
+
+        if (total > 100 || sVal < 0 || cVal < 0) {
+            errorMsg.classList.remove('hidden');
+            totalBadge.className = "text-[10px] font-extrabold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md";
+            submitBtn.disabled = true;
+        } else {
+            errorMsg.classList.add('hidden');
+            totalBadge.className = "text-[10px] font-extrabold theme-text-dark theme-bg-light px-2 py-0.5 rounded-md border theme-border-light";
+            submitBtn.disabled = false;
+            finalHidden.value = `%${sVal} (Yönlendiren) - %${cVal} (Kapatan)`;
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const bInput = document.getElementById('realButceInput');
+        if (bInput && bInput.value && Number(bInput.value) > 0) {
+            document.getElementById('displayButce').value = Number(bInput.value).toLocaleString('tr-TR');
+        }
+    });
+</script>
+{% endblock %}

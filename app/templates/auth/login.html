@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Giriş Yap - EMLAKMATCH{% endblock %}
+
+{% block bottom_nav %}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col justify-between min-h-[85vh] py-2 max-w-md mx-auto">
+    <!-- 1. Logo ve Başlık -->
+    <div class="flex flex-col items-center text-center mt-2">
+        <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-200 shadow-sm mb-2.5">
+            <svg class="w-7 h-7 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+        </div>
+        <h1 class="text-xl font-black tracking-tight text-slate-900">EMLAKMATCH</h1>
+        <p class="text-[11px] text-slate-500 font-semibold mt-0.5">Gayrimenkul Profesyonelleri & Proje Satış Ağı</p>
+    </div>
+
+    <!-- 2. İKİ BUTON: EMLAKÇI GİRİŞİ & ŞİRKET GİRİŞİ (YEŞİL, KABARTMALI, NEGATİF-POZİTİF GEÇİŞLİ) -->
+    <div class="my-4 space-y-2">
+        <div class="grid grid-cols-2 gap-2.5 p-1.5 bg-emerald-100/60 rounded-2xl border border-emerald-200">
+            <button type="button" 
+                    id="btnTabAgent" 
+                    onclick="switchLoginRole('agent')" 
+                    class="py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 shadow-sm border border-emerald-600 bg-emerald-600 text-white hover:bg-white hover:text-emerald-800">
+                Emlakçı Girişi
+            </button>
+
+            <button type="button" 
+                    id="btnTabCompany" 
+                    onclick="switchLoginRole('company')" 
+                    class="py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-600 hover:text-white">
+                Şirket Girişi
+            </button>
+        </div>
+
+        <p id="roleNoticeText" class="text-[10px] text-center text-emerald-900 font-bold">
+            Bağımsız broker ve gayrimenkul danışmanları paneli
+        </p>
+    </div>
+
+    <!-- 3. Form Alanı -->
+    <div class="space-y-3 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs">
+        {% if error %}
+        <div class="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl text-center">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/login" method="POST" class="space-y-3">
+            <input type="hidden" name="login_type" id="hiddenLoginType" value="{{ login_type or 'agent' }}">
+
+            <div>
+                <label id="emailLabel" class="block text-[11px] font-bold text-slate-700 mb-1">E-Posta Adresi</label>
+                <input type="email" name="eposta" required placeholder="ornek@alanadi.com" 
+                       class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Şifre</label>
+                <input type="password" name="sifre" required placeholder="••••••••" 
+                       class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+            </div>
+
+            <!-- Giriş Butonu (Negatif-Pozitif Hover) -->
+            <button type="submit" 
+                    class="w-full mt-2 bg-emerald-600 hover:bg-white text-white hover:text-emerald-700 border-2 border-emerald-600 font-black py-3 rounded-xl text-xs transition-all duration-200 shadow-sm active:scale-[0.99]">
+                Sisteme Giriş Yap
+            </button>
+        </form>
+
+        <div class="pt-2 border-t border-slate-100">
+            <a id="registerLink" href="/register?type=agent" 
+               class="block w-full text-center bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-200 font-extrabold py-2.5 rounded-xl text-xs transition-all duration-200">
+                Yeni Hesap Başvurusu Yap
+            </a>
+        </div>
+    </div>
+
+    <!-- Alt Bilgi & Admin -->
+    <div class="space-y-2 text-center pt-2">
+        <div>
+            <a href="/admin/login" class="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-700">
+                <span>Yönetici / Admin Girişi</span>
+            </a>
+        </div>
+        <p class="text-[10px] text-slate-400">
+            EMLAKMATCH B2B İş Ortaklığı Altyapısı
+        </p>
+    </div>
+</div>
+
+<script>
+    function switchLoginRole(role) {
+        const btnAgent = document.getElementById('btnTabAgent');
+        const btnCompany = document.getElementById('btnTabCompany');
+        const hiddenInput = document.getElementById('hiddenLoginType');
+        const notice = document.getElementById('roleNoticeText');
+        const emailLabel = document.getElementById('emailLabel');
+        const regLink = document.getElementById('registerLink');
+
+        hiddenInput.value = role;
+
+        if (role === 'agent') {
+            btnAgent.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 shadow-sm border border-emerald-600 bg-emerald-600 text-white hover:bg-white hover:text-emerald-800';
+            btnCompany.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-600 hover:text-white';
+            notice.innerText = 'Bağımsız broker ve gayrimenkul danışmanları paneli';
+            emailLabel.innerText = 'Danışman E-Posta Adresi';
+            regLink.href = '/register?type=agent';
+            regLink.innerText = 'Emlakçı Başvurusu Yap';
+        } else {
+            btnCompany.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 shadow-sm border border-emerald-600 bg-emerald-600 text-white hover:bg-white hover:text-emerald-800';
+            btnAgent.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-600 hover:text-white';
+            notice.innerText = 'İnşaat ve proje geliştirici firmaları yönetim konsolu';
+            emailLabel.innerText = 'Şirket Yetkili E-Postası';
+            regLink.href = '/register?type=company';
+            regLink.innerText = 'Proje Firması Başvurusu Yap';
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const initialType = "{{ login_type or 'agent' }}";
+        switchLoginRole(initialType);
+    });
+</script>
+{% endblock %}

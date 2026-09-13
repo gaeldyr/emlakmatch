@@ -1,0 +1,233 @@
+{% extends "company/layout.html" %}
+
+{% block title %}Müşteri Tescilleri & Lead Havuzu - Proje Yönetim Konsolu{% endblock %}
+{% block header_title %}Müşteri Tescilleri & Lead Havuzu{% endblock %}
+
+{% block content %}
+<div class="space-y-6 pb-16">
+
+    <!-- Üst Bilgi Başlığı ve Sayfa Özeti -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-2xs flex items-center justify-between">
+        <div>
+            <h2 class="text-base font-black text-slate-900 tracking-tight">Müşteri Tescilleri</h2>
+            <p class="text-xs text-slate-500 mt-0.5">90 gün korumalı emlakçı yönlendirmeleri (Toplam {{ total_count }} Tescil)</p>
+        </div>
+        <span class="px-3.5 py-1.5 theme-bg-light theme-text-dark border theme-border-light text-xs font-black rounded-xl shadow-2xs">
+            Sayfa {{ page }} / {{ total_pages }}
+        </span>
+    </div>
+
+    {% if request.query_params.get('err') == 'project_inactive' %}
+    <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl flex items-center gap-2">
+        <span>✕ Bu proje yayından kaldırıldığı (Pasif) için müşteri tescil durumu güncellenemez.</span>
+    </div>
+    {% endif %}
+
+    <!-- Tescil Kartları Listesi (Sayfalanmış) -->
+    <div class="space-y-4">
+        {% if registrations and registrations|length > 0 %}
+            {% for r in registrations %}
+            {% set is_project_inactive = (r.projects and r.projects.durum == 'Pasif') %}
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4 transition hover:border-slate-300 {% if is_project_inactive %}opacity-80{% endif %}">
+                
+                <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+                    <div>
+                        <span class="text-[9px] font-black font-mono text-slate-400 block uppercase tracking-wider">TESCİL NO: {{ r.tescil_no }}</span>
+                        <h3 class="text-sm font-black text-slate-900 mt-0.5">{{ r.musteri_ad_soyad }}</h3>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        {% if is_project_inactive %}
+                        <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">
+                            Proje Pasif / Kapalı
+                        </span>
+                        {% endif %}
+
+                        {% set st = r.durum|lower %}
+                        {% if st in ['satış yapıldı', 'satis yapildi'] %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light">
+                                ✓ Satış Yapıldı
+                            </span>
+                        {% elif st == 'rezervasyon' %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200">
+                                Rezervasyon
+                            </span>
+                        {% elif st == 'yer gösterimi' %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+                                Yer Gösterimi
+                            </span>
+                        {% elif st == 'görüşmede' %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-200">
+                                Görüşmede
+                            </span>
+                        {% else %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light">
+                                Doğrulandı
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Bilgi Izgarası -->
+                <div class="grid grid-cols-4 gap-4 text-xs bg-slate-50/70 p-3.5 rounded-2xl border border-slate-100">
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">İlgili Proje:</span>
+                        <span class="font-extrabold text-slate-800 truncate block mt-0.5">{{ r.projects.ad if r.projects else 'Proje' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Yönlendiren Danışman:</span>
+                        <span class="font-extrabold text-slate-800 truncate block mt-0.5">{{ r.users.ad_soyad if r.users else 'Danışman' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Maskeli Telefon:</span>
+                        <span class="font-mono font-extrabold text-slate-700 block mt-0.5">{{ r.musteri_telefon_maskeli or r.musteri_telefon }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Koruma Bitiş Tarihi:</span>
+                        <span class="font-mono font-black theme-text-dark block mt-0.5">{{ r.koruma_bitis_tarihi[:10] if r.koruma_bitis_tarihi else '-' }}</span>
+                    </div>
+                </div>
+
+                <!-- Durum Güncelleme ve Buton Alanı -->
+                {% if not is_project_inactive %}
+                <div class="flex items-center justify-between pt-1">
+                    <span class="text-[11px] font-bold text-slate-500">Müşterinin görüşme ve süreç aşamasını güncelleyin:</span>
+                    
+                    <button type="button" 
+                            onclick="openRegistrationStatusDrawer('{{ r.id }}', '{{ r.musteri_ad_soyad }}', '{{ r.durum }}')"
+                            class="px-4 py-2 theme-bg-light hover:theme-bg-primary hover:text-white theme-text-dark border theme-border-light text-xs font-black rounded-xl transition shadow-2xs flex items-center gap-1.5 active:scale-95">
+                        <span>Aşamayı Değiştir: <strong>{{ r.durum }}</strong></span>
+                        <span class="text-xs">▾</span>
+                    </button>
+                </div>
+                {% else %}
+                <div class="flex items-center justify-between pt-1 text-xs">
+                    <span class="text-[11px] font-bold text-amber-700 flex items-center gap-1">
+                        <span>⚠️ Bu proje yayından kaldırıldığı için müşteri tescil durumu güncellenemez.</span>
+                    </span>
+                    <span class="text-[11px] font-mono text-slate-400 font-bold">Kilitli</span>
+                </div>
+                {% endif %}
+
+            </div>
+            {% endfor %}
+
+            <!-- Sayfalama (Pagination) -->
+            {% if total_pages > 1 %}
+            <div class="flex items-center justify-center gap-2 pt-6">
+                {% if page > 1 %}
+                <a href="/company/registrations?page={{ page - 1 }}" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl transition shadow-2xs">
+                    ‹ Önceki
+                </a>
+                {% endif %}
+
+                {% for p_num in range(1, total_pages + 1) %}
+                <a href="/company/registrations?page={{ p_num }}" class="w-9 h-9 flex items-center justify-center rounded-xl text-xs font-black transition shadow-2xs {% if p_num == page %}theme-bg-primary text-white{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+                    {{ p_num }}
+                </a>
+                {% endfor %}
+
+                {% if page < total_pages %}
+                <a href="/company/registrations?page={{ page + 1 }}" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl transition shadow-2xs">
+                    Sonraki ›
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        {% else %}
+            <div class="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-2 shadow-2xs">
+                <h3 class="text-xs font-black text-slate-700">Henüz Kayıtlı Müşteri Tescili Bulunmuyor</h3>
+                <p class="text-[11px] text-slate-400 max-w-sm mx-auto">Danışmanlar projelerinize hazır alıcı tescilledikçe bu listede 90 gün korumalı olarak takip edebilirsiniz.</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ================= DİNAMİK TEMALI AŞAMA DEĞİŞTİRME ÇEKMECESİ ================= -->
+<div id="statusDrawer" onclick="closeRegistrationStatusDrawer()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="statusDrawerContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-6 space-y-4 shadow-2xl border-t theme-border-primary transform translate-y-full transition-transform duration-300">
+        
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto"></div>
+
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+                <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Tescil Durumu Güncelle</span>
+                <h3 id="drawerCustomerName" class="text-xs font-black text-slate-900 mt-0.5">Müşteri Adı</h3>
+            </div>
+            <button type="button" onclick="closeRegistrationStatusDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold leading-none">✕</button>
+        </div>
+
+        <form id="drawerStatusForm" action="/company/registrations/update-status" method="POST" class="space-y-3">
+            <input type="hidden" name="registration_id" id="drawerRegId" value="">
+            <input type="hidden" name="yeni_durum" id="drawerNewStatusInput" value="">
+
+            <div class="space-y-1.5" id="drawerStatusOptions">
+                {% for st_item in ["Doğrulandı", "Görüşmede", "Yer Gösterimi", "Rezervasyon", "Satış Yapıldı", "İptal Edildi"] %}
+                <button type="button" 
+                        data-status="{{ st_item }}"
+                        onclick="selectRegistrationStatus('{{ st_item }}')"
+                        class="status-option-btn w-full p-3 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light hover:theme-border-light text-left transition flex items-center justify-between group">
+                    <span class="font-bold text-xs text-slate-800 group-hover:theme-text-dark">{{ st_item }}</span>
+                    <span class="theme-text-dark opacity-0 group-hover:opacity-100 font-black text-sm transition">✓</span>
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" class="w-full py-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-2xl transition shadow-xs active:scale-95">
+                    Seçili Aşamayı Onayla & Kaydet
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openRegistrationStatusDrawer(regId, customerName, currentStatus) {
+        document.getElementById('drawerRegId').value = regId;
+        document.getElementById('drawerCustomerName').innerText = customerName;
+        document.getElementById('drawerNewStatusInput').value = currentStatus;
+
+        document.querySelectorAll('.status-option-btn').forEach(btn => {
+            const st = btn.getAttribute('data-status');
+            const isMatch = (st.toLowerCase() === currentStatus.toLowerCase());
+            if (isMatch) {
+                btn.className = 'status-option-btn w-full p-3 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between group shadow-2xs';
+                btn.querySelector('span:last-child').className = 'theme-text-dark opacity-100 font-black text-sm';
+            } else {
+                btn.className = 'status-option-btn w-full p-3 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between group';
+                btn.querySelector('span:last-child').className = 'theme-text-dark opacity-0 group-hover:opacity-100 font-black text-sm transition';
+            }
+        });
+
+        const drawer = document.getElementById('statusDrawer');
+        const content = document.getElementById('statusDrawerContent');
+        drawer.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeRegistrationStatusDrawer() {
+        const drawer = document.getElementById('statusDrawer');
+        const content = document.getElementById('statusDrawerContent');
+        drawer.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function selectRegistrationStatus(statusName) {
+        document.getElementById('drawerNewStatusInput').value = statusName;
+
+        document.querySelectorAll('.status-option-btn').forEach(btn => {
+            const st = btn.getAttribute('data-status');
+            if (st === statusName) {
+                btn.className = 'status-option-btn w-full p-3 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between group shadow-2xs';
+                btn.querySelector('span:last-child').className = 'theme-text-dark opacity-100 font-black text-sm';
+            } else {
+                btn.className = 'status-option-btn w-full p-3 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between group';
+                btn.querySelector('span:last-child').className = 'theme-text-dark opacity-0 group-hover:opacity-100 font-black text-sm transition';
+            }
+        });
+    }
+</script>
+{% endblock %}

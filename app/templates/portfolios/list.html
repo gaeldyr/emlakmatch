@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+
+{% block title %}Portföylerim - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-6 max-w-md mx-auto">
+    <!-- Üst Başlık & Yeni Ekle Butonu -->
+    <div class="flex items-center justify-between pt-1">
+        <div>
+            <h1 class="text-base font-extrabold text-slate-900 tracking-tight">Aktif Portföylerim</h1>
+            <p class="text-[11px] text-slate-400">Ağa sunduğunuz mülkler</p>
+        </div>
+        <a href="/portfolios/add" class="flex items-center gap-1.5 theme-bg-primary theme-hover-bg active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs">
+            <span>+</span> Yeni Portföy
+        </a>
+    </div>
+
+    <!-- Bilgi Notu -->
+    <div class="p-2.5 theme-bg-light border theme-border-light rounded-xl text-[11px] theme-text-dark flex items-center gap-2">
+        <svg class="w-4 h-4 stroke-current theme-text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>Detay ve <strong>fotoğraflar</strong> için dokunun, işlem için <strong>basılı tutun</strong>.</span>
+    </div>
+
+    <!-- Portföy Kartları Grid Listesi -->
+    <div class="grid grid-cols-2 gap-3 pt-1">
+        {% if portfolios and portfolios|length > 0 %}
+            {% for p in portfolios %}
+            <div class="port-card relative bg-white border border-slate-200/80 rounded-2xl p-2.5 shadow-2xs cursor-pointer select-none transition-all duration-200 hover:shadow-md hover:theme-border-primary {% if p.durum and p.durum|string|lower == 'satıldı' %}bg-purple-50/40 border-purple-200/80{% elif p.durum and p.durum|string|lower == 'pasif' %}opacity-75 bg-slate-50/80 border-dashed{% endif %}"
+                 data-id="{{ p.id }}"
+                 data-title="{{ p.gayrimenkul_tipi or 'Gayrimenkul' }} - {{ p.ilce or 'İstanbul' }}"
+                 data-location="{{ p.il or 'İstanbul' }} / {{ p.ilce or '' }} {% if p.mahalle_site %}({{ p.mahalle_site }}){% endif %}"
+                 data-type="{{ p.gayrimenkul_tipi or 'Konut' }}"
+                 data-price="{% if p.fiyat %}{{ '{:,}'.format(p.fiyat).replace(',', '.') }} TL{% else %}Belirtilmemiş{% endif %}"
+                 data-oda="{{ p.oda or '-' }}"
+                 data-m2="{{ p.m2 or '-' }} m²"
+                 data-status="{{ (p.durum or 'Aktif')|string|trim }}"
+                 data-yetki="{{ p.yetki_durumu or 'Satış Yetkili' }}"
+                 data-desc="{{ p.kisa_aciklama or 'Özel bir açıklama girilmedi.' }}"
+                 data-images='{% if p.fotograflar and p.fotograflar|length > 0 %}{{ p.fotograflar|tojson }}{% elif p.ana_fotograf %}["{{ p.ana_fotograf }}"]{% else %}[]{% endif %}'>
+                
+                <!-- Kapak Fotoğrafı & Çoklu Görsel Sayacı -->
+                <div class="w-full h-24 rounded-xl overflow-hidden mb-2 bg-slate-100 relative border border-slate-100 pointer-events-none">
+                    <img src="{{ p.ana_fotograf if p.ana_fotograf else 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80' }}" 
+                         alt="{{ p.gayrimenkul_tipi }}" 
+                         class="w-full h-full object-cover">
+                    
+                    {% if p.fotograflar and p.fotograflar|length > 1 %}
+                    <span class="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-slate-900/75 backdrop-blur-xs text-white text-[9px] font-bold rounded-md flex items-center gap-1 shadow-xs">
+                        <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        {{ p.fotograflar|length }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Üst Rozetler -->
+                <div class="flex items-center justify-between mb-1.5 pointer-events-none">
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold theme-bg-light theme-text-dark border theme-border-light uppercase">
+                        {{ p.gayrimenkul_tipi or 'Portföy' }}
+                    </span>
+
+                    {% if p.durum and p.durum|string|lower == 'satıldı' %}
+                        <span class="text-[10px] font-black text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
+                            Satıldı
+                        </span>
+                    {% elif p.durum and p.durum|string|lower == 'pasif' %}
+                        <span class="text-[10px] font-bold text-amber-700 bg-amber-100/80 border border-amber-300 px-2 py-0.5 rounded-md">
+                            Pasif
+                        </span>
+                    {% else %}
+                        <span class="text-[10px] font-bold theme-text-dark theme-bg-light border theme-border-light px-2 py-0.5 rounded-md">
+                            Aktif
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- Fiyat -->
+                <div class="text-xs font-extrabold text-slate-900 leading-tight pointer-events-none">
+                    {% if p.fiyat %}
+                        {{ '{:,}'.format(p.fiyat).replace(',', '.') }} TL
+                    {% else %}
+                        Fiyat Belirtilmedi
+                    {% endif %}
+                </div>
+
+                <!-- Konum -->
+                <div class="flex items-center gap-1 text-[10px] text-slate-500 font-medium mt-0.5 pointer-events-none">
+                    <span class="theme-text-primary">📍</span>
+                    <span class="truncate">{{ p.ilce or 'İstanbul' }}</span>
+                </div>
+
+                <!-- Alt Detay Çubuğu -->
+                <div class="grid grid-cols-3 gap-1 pt-2 mt-2 border-t border-slate-100 text-center text-[9px] text-slate-500 font-semibold pointer-events-none">
+                    <div class="bg-slate-50 py-0.5 rounded">
+                        <span>{{ p.oda or '-' }}</span>
+                    </div>
+                    <div class="bg-slate-50 py-0.5 rounded">
+                        <span>{{ p.m2 or '-' }} m²</span>
+                    </div>
+                    <div class="bg-slate-50 py-0.5 rounded">
+                        <span>Yetkili</span>
+                    </div>
+                </div>
+
+                <!-- Alt Buton -->
+                {% if p.durum and p.durum|string|lower == 'satıldı' %}
+                    <div class="block w-full text-center mt-2.5 bg-slate-100 text-slate-500 font-bold text-[10px] py-1.5 rounded-xl border border-slate-200 cursor-not-allowed select-none">
+                        İşlem Tamamlandı
+                    </div>
+                {% else %}
+                    <a href="/portfolios/agents-for/{{ p.id }}" 
+                       onclick="event.stopPropagation();" 
+                       ontouchstart="event.stopPropagation();" 
+                       ontouchend="event.stopPropagation(); window.location.href='/portfolios/agents-for/{{ p.id }}';"
+                       class="relative z-10 flex items-center justify-center gap-1.5 w-full text-center mt-2.5 theme-bg-light hover:theme-bg-primary hover:text-white active:theme-bg-primary text-slate-800 font-bold text-[10px] py-1.5 rounded-xl transition border theme-border-light">
+                        <svg class="w-3 h-3 stroke-current pointer-events-none" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <span class="pointer-events-none">Emlakçıları Bul</span>
+                    </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-span-2 bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs">
+                Henüz eklenmiş bir portföyünüz bulunmuyor.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================= 1. AYRINTI MODALI ================= -->
+<div id="detailModal" onclick="closeDetailModal()" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="detailContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-3.5 shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[90vh] overflow-y-auto">
+        <div class="w-12 h-1 bg-slate-200 rounded-full mx-auto"></div>
+        
+        <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+            <div>
+                <span id="modType" class="text-[10px] font-extrabold theme-text-dark uppercase theme-bg-light px-2 py-0.5 rounded-md border theme-border-light">VİLLA</span>
+                <h3 id="modTitle" class="text-sm font-extrabold text-slate-900 mt-1">Mülk Detayı</h3>
+            </div>
+            <button onclick="closeDetailModal(true)" class="p-1 text-slate-400 hover:text-slate-700 text-lg font-bold">✕</button>
+        </div>
+
+        <div>
+            <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">İlan Fotoğrafları</span>
+                <span id="galleryCountBadge" class="text-[10px] font-bold theme-text-dark theme-bg-light px-2 py-0.5 rounded-md border theme-border-light">0 Fotoğraf</span>
+            </div>
+            
+            <div id="modalGalleryContainer" class="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none">
+            </div>
+            <p class="text-[9px] text-slate-400 text-right">Tam boy görmek için fotoğrafa dokunun</p>
+        </div>
+
+        <div class="space-y-2 text-xs">
+            <div class="flex justify-between py-1.5 border-b border-slate-50">
+                <span class="text-slate-400 font-semibold">Fiyat</span>
+                <span id="modPrice" class="font-extrabold theme-text-primary text-sm">40.000.000 TL</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-50">
+                <span class="text-slate-400 font-semibold">Lokasyon</span>
+                <span id="modLocation" class="font-bold text-slate-800">İstanbul / Beykoz</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-50">
+                <span class="text-slate-400 font-semibold">Oda Sayısı</span>
+                <span id="modOda" class="font-bold text-slate-800">5+1</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-50">
+                <span class="text-slate-400 font-semibold">Metrekare</span>
+                <span id="modM2" class="font-bold text-slate-800">450 m²</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-50">
+                <span class="text-slate-400 font-semibold">Yetki Durumu</span>
+                <span id="modYetki" class="font-bold text-slate-800">Satış Yetkili</span>
+            </div>
+            <div>
+                <span class="text-slate-400 font-semibold block mb-1">Nitelikler & Açıklama</span>
+                <p id="modDesc" class="p-3 bg-slate-50 rounded-xl text-slate-700 text-[11px] leading-relaxed border border-slate-100"></p>
+            </div>
+        </div>
+
+        <button onclick="closeDetailModal(true)" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">
+            Kapat
+        </button>
+    </div>
+</div>
+
+<!-- ================= 2. TAM EKRAN LIGHTBOX ================= -->
+<div id="lightboxModal" onclick="closeLightbox()" class="fixed inset-0 z-[99999] bg-black/95 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-200 p-2 select-none">
+    <div class="absolute top-4 inset-x-4 flex items-center justify-between z-10" onclick="event.stopPropagation()">
+        <span id="lightboxCounter" class="text-white text-xs font-bold bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">1 / 1</span>
+        <button onclick="closeLightbox()" class="text-white text-xl font-bold bg-white/20 backdrop-blur-md w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/30 active:scale-95 transition">✕</button>
+    </div>
+
+    <button id="btnPrevPhoto" onclick="prevLightboxPhoto(event)" class="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center text-2xl font-bold backdrop-blur-md transition active:scale-90 shadow-lg border border-white/10">
+        ‹
+    </button>
+
+    <div class="max-w-full max-h-[80vh] flex items-center justify-center p-2" onclick="event.stopPropagation()">
+        <img id="lightboxImage" src="" alt="Tam Boy Görsel" class="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl transition duration-200">
+    </div>
+
+    <button id="btnNextPhoto" onclick="nextLightboxPhoto(event)" class="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center text-2xl font-bold backdrop-blur-md transition active:scale-90 shadow-lg border border-white/10">
+        ›
+    </button>
+</div>
+
+<!-- ================= 3. BASILI TUTUNCA AÇILAN AKSİYON ÇEKMECESİ ================= -->
+<div id="actionSheet" onclick="closeActionSheet()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="actionContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-3 shadow-2xl transform translate-y-full transition-transform duration-300">
+        <div class="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-1"></div>
+        <div class="text-center pb-2">
+            <h4 class="text-xs font-bold text-slate-800">Portföy İşlemleri</h4>
+            <p id="actionTargetTitle" class="text-[11px] text-slate-400 mt-0.5 truncate"></p>
+        </div>
+
+        <div class="space-y-2 text-xs font-bold">
+            <a id="editLink" href="#" class="w-full py-3 px-4 bg-slate-50 hover:theme-bg-light theme-text-dark rounded-xl flex items-center justify-between transition border border-slate-200/60">
+                <span class="flex items-center gap-2.5">
+                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <span>Portföyü Düzenle</span>
+                </span>
+                <span class="text-slate-400 text-sm">›</span>
+            </a>
+
+            <form id="statusForm" method="POST" action="">
+                <button type="submit" class="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl flex items-center justify-between transition border border-slate-200/60">
+                    <span class="flex items-center gap-2.5">
+                        <span id="statusIcon">
+                            <svg class="w-4 h-4 stroke-current text-slate-600" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                        </span>
+                        <span id="statusBtnText">Durumu Değiştir</span>
+                    </span>
+                    <span class="text-slate-400 text-sm">›</span>
+                </button>
+            </form>
+
+            <form id="deleteForm" method="POST" action="" onsubmit="return confirm('Bu portföyü kalıcı olarak silmek istediğinizden emin misiniz?');">
+                <button type="submit" class="w-full py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl flex items-center justify-between transition border border-red-200/70">
+                    <span class="flex items-center gap-2.5">
+                        <svg class="w-4 h-4 stroke-current text-red-600" viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <span>Portföyü Sil</span>
+                    </span>
+                    <span class="text-red-400 text-sm">›</span>
+                </button>
+            </form>
+        </div>
+
+        <button type="button" onclick="closeActionSheet()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl text-xs transition mt-2">
+            Vazgeç
+        </button>
+    </div>
+</div>
+
+<script>
+    let pressTimer = null;
+    let isLongPress = false;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isScrolling = false;
+    let lastModalOpenTime = 0;
+
+    let currentGalleryImages = [];
+    let currentLightboxIndex = 0;
+
+    document.querySelectorAll('.port-card').forEach(card => {
+        card.addEventListener('touchstart', (e) => {
+            if (e.target.closest('a') || e.target.closest('button')) return;
+
+            isLongPress = false;
+            isScrolling = false;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+
+            pressTimer = setTimeout(() => {
+                isLongPress = true;
+                card.classList.add('scale-95', 'ring-2', 'theme-border-primary');
+                if (navigator.vibrate) navigator.vibrate(50);
+                openActionSheet(card);
+            }, 500);
+        }, { passive: true });
+
+        card.addEventListener('touchmove', (e) => {
+            if (e.target.closest('a') || e.target.closest('button')) return;
+
+            const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+            const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+
+            if (deltaX > 10 || deltaY > 10) {
+                isScrolling = true;
+                clearTimeout(pressTimer);
+                card.classList.remove('scale-95', 'ring-2', 'theme-border-primary');
+            }
+        }, { passive: true });
+
+        card.addEventListener('touchend', (e) => {
+            if (e.target.closest('a') || e.target.closest('button')) {
+                clearTimeout(pressTimer);
+                card.classList.remove('scale-95', 'ring-2', 'theme-border-primary');
+                return;
+            }
+
+            clearTimeout(pressTimer);
+            card.classList.remove('scale-95', 'ring-2', 'theme-border-primary');
+
+            if (isLongPress || isScrolling) return;
+
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+            openDetailModal(card);
+        });
+
+        card.addEventListener('mousedown', (e) => {
+            if (e.target.closest('a') || e.target.closest('button')) return;
+            if (e.button !== 0) return;
+            isLongPress = false;
+            pressTimer = setTimeout(() => {
+                isLongPress = true;
+                card.classList.add('scale-95', 'ring-2', 'theme-border-primary');
+                openActionSheet(card);
+            }, 500);
+        });
+
+        card.addEventListener('mouseup', (e) => {
+            if (e.target.closest('a') || e.target.closest('button')) return;
+            if (e.button !== 0) return;
+            clearTimeout(pressTimer);
+            card.classList.remove('scale-95', 'ring-2', 'theme-border-primary');
+            if (!isLongPress) {
+                openDetailModal(card);
+            }
+        });
+
+        card.addEventListener('mouseleave', () => {
+            clearTimeout(pressTimer);
+            card.classList.remove('scale-95', 'ring-2', 'theme-border-primary');
+        });
+    });
+
+    function openDetailModal(card) {
+        lastModalOpenTime = Date.now();
+
+        document.getElementById('modType').innerText = card.dataset.type;
+        document.getElementById('modTitle').innerText = card.dataset.title;
+        document.getElementById('modPrice').innerText = card.dataset.price;
+        document.getElementById('modLocation').innerText = card.dataset.location;
+        document.getElementById('modOda').innerText = card.dataset.oda;
+        document.getElementById('modM2').innerText = card.dataset.m2;
+        document.getElementById('modYetki').innerText = card.dataset.yetki;
+        document.getElementById('modDesc').innerText = card.dataset.desc;
+
+        const galleryContainer = document.getElementById('modalGalleryContainer');
+        galleryContainer.innerHTML = '';
+
+        try {
+            currentGalleryImages = JSON.parse(card.dataset.images || '[]');
+        } catch(err) {
+            currentGalleryImages = [];
+        }
+
+        if (!currentGalleryImages || currentGalleryImages.length === 0) {
+            currentGalleryImages = ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80"];
+        }
+
+        document.getElementById('galleryCountBadge').innerText = `${currentGalleryImages.length} Fotoğraf`;
+
+        currentGalleryImages.forEach((imgUrl, idx) => {
+            const item = document.createElement('div');
+            item.className = 'w-48 h-32 shrink-0 rounded-2xl overflow-hidden bg-slate-100 relative snap-start cursor-pointer border border-slate-200 group';
+            item.innerHTML = `
+                <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold rounded-md">
+                    ${idx + 1} / ${currentGalleryImages.length}
+                </span>
+            `;
+            item.onclick = (e) => {
+                e.stopPropagation();
+                openLightbox(idx);
+            };
+            galleryContainer.appendChild(item);
+        });
+
+        const modal = document.getElementById('detailModal');
+        const content = document.getElementById('detailContent');
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeDetailModal(force = false) {
+        if (!force && Date.now() - lastModalOpenTime < 400) {
+            return;
+        }
+        const modal = document.getElementById('detailModal');
+        const content = document.getElementById('detailContent');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function openLightbox(index) {
+        if (!currentGalleryImages || currentGalleryImages.length === 0) return;
+        currentLightboxIndex = index;
+        updateLightboxView();
+
+        const lb = document.getElementById('lightboxModal');
+        lb.classList.remove('opacity-0', 'pointer-events-none');
+
+        const nav = document.getElementById('bottomNavContainer');
+        if (nav && nav.parentElement) {
+            nav.parentElement.style.display = 'none';
+        }
+    }
+
+    function updateLightboxView() {
+        const total = currentGalleryImages.length;
+        const currentUrl = currentGalleryImages[currentLightboxIndex];
+        
+        document.getElementById('lightboxImage').src = currentUrl;
+        document.getElementById('lightboxCounter').innerText = `${currentLightboxIndex + 1} / ${total}`;
+
+        const btnPrev = document.getElementById('btnPrevPhoto');
+        const btnNext = document.getElementById('btnNextPhoto');
+        if (total <= 1) {
+            btnPrev.classList.add('hidden');
+            btnNext.classList.add('hidden');
+        } else {
+            btnPrev.classList.remove('hidden');
+            btnNext.classList.remove('hidden');
+        }
+    }
+
+    function prevLightboxPhoto(e) {
+        if (e) e.stopPropagation();
+        if (currentLightboxIndex > 0) {
+            currentLightboxIndex--;
+        } else {
+            currentLightboxIndex = currentGalleryImages.length - 1;
+        }
+        updateLightboxView();
+    }
+
+    function nextLightboxPhoto(e) {
+        if (e) e.stopPropagation();
+        if (currentLightboxIndex < currentGalleryImages.length - 1) {
+            currentLightboxIndex++;
+        } else {
+            currentLightboxIndex = 0;
+        }
+        updateLightboxView();
+    }
+
+    function closeLightbox() {
+        const lb = document.getElementById('lightboxModal');
+        lb.classList.add('opacity-0', 'pointer-events-none');
+
+        const nav = document.getElementById('bottomNavContainer');
+        if (nav && nav.parentElement) {
+            nav.parentElement.style.display = '';
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        const lb = document.getElementById('lightboxModal');
+        if (!lb.classList.contains('pointer-events-none')) {
+            if (e.key === 'ArrowLeft') prevLightboxPhoto();
+            if (e.key === 'ArrowRight') nextLightboxPhoto();
+            if (e.key === 'Escape') closeLightbox();
+        }
+    });
+
+    function openActionSheet(card) {
+        const id = card.dataset.id;
+        const currentStatus = (card.dataset.status || '').trim().toLowerCase();
+
+        document.getElementById('actionTargetTitle').innerText = card.dataset.title;
+        document.getElementById('editLink').href = `/portfolios/edit/${id}`;
+        document.getElementById('deleteForm').action = `/portfolios/delete/${id}`;
+        document.getElementById('statusForm').action = `/portfolios/toggle-status/${id}`;
+
+        const statusForm = document.getElementById('statusForm');
+        const editLink = document.getElementById('editLink');
+
+        if (currentStatus === 'satıldı') {
+            statusForm.classList.add('hidden');
+            editLink.classList.add('hidden');
+        } else {
+            statusForm.classList.remove('hidden');
+            editLink.classList.remove('hidden');
+
+            const statusBtnText = document.getElementById('statusBtnText');
+            if (currentStatus === 'aktif') {
+                statusBtnText.innerText = 'Yayından Kaldır (Pasife Al)';
+            } else {
+                statusBtnText.innerText = 'Tekrar Yayına Al (Aktif Et)';
+            }
+        }
+
+        const sheet = document.getElementById('actionSheet');
+        const content = document.getElementById('actionContent');
+        sheet.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeActionSheet() {
+        const sheet = document.getElementById('actionSheet');
+        const content = document.getElementById('actionContent');
+        sheet.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+</script>
+{% endblock %}

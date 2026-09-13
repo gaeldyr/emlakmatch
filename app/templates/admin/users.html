@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Emlakçı Onay Masası{% endblock %}
+
+{% block content %}
+<div class="space-y-5 pb-8 max-w-md mx-auto">
+    <!-- Üst Başlık -->
+    <div class="flex items-center justify-between pb-2 border-b border-slate-100 pt-1">
+        <a href="/dashboard" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+        </a>
+        <h1 class="text-sm font-extrabold text-slate-900 tracking-tight">Emlakçı Başvuru Onayları</h1>
+        <div class="w-6"></div>
+    </div>
+
+    <!-- 1. ONAY BEKLEYENLER -->
+    <div class="space-y-3">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">Onay Bekleyenler</h2>
+            <span class="text-[10px] font-extrabold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md">
+                {{ pending_users|length }} Başvuru
+            </span>
+        </div>
+
+        {% if pending_users and pending_users|length > 0 %}
+            {% for u in pending_users %}
+            <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                <div class="flex items-start gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 font-extrabold flex items-center justify-center shrink-0 overflow-hidden border border-emerald-200">
+                        {% if u.profil_foto %}
+                            <img src="{{ u.profil_foto }}" class="w-full h-full object-cover">
+                        {% else %}
+                            {{ (u.ad_soyad[:2] if u.ad_soyad else 'EM').upper() }}
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-xs font-bold text-slate-900 truncate">{{ u.ad_soyad }}</h3>
+                        <p class="text-[11px] text-emerald-700 font-semibold truncate">{{ u.sirket_unvani or 'Şirket Belirtilmedi' }}</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">📞 {{ u.telefon or '-' }} | ✉️ {{ u.eposta }}</p>
+                    </div>
+                </div>
+
+                <!-- Taşınmaz Belgesi Bilgisi & Görseli -->
+                <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Yetki Belge No:</span>
+                        <span class="font-mono font-bold text-slate-800">{{ u.yetki_belgesi_no or 'Girilmedi' }}</span>
+                    </div>
+
+                    {% if u.yetki_belgesi_url %}
+                    <div class="pt-1">
+                        <a href="{{ u.yetki_belgesi_url }}" target="_blank" class="block w-full py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-center font-bold text-[11px] rounded-lg border border-emerald-200 transition">
+                            📄 Yetki Belgesini İncele (Yeni Sekme)
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Çalışma Bölgeleri ve Uzmanlıklar -->
+                <div class="space-y-1.5 text-[10px]">
+                    <div>
+                        <span class="text-slate-400 font-bold block">İlçeler:</span>
+                        <div class="flex flex-wrap gap-1 mt-0.5">
+                            {% for d in u.calistigi_ilceler %}
+                                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-semibold">{{ d }}</span>
+                            {% else %}
+                                <span class="text-slate-400 italic">Belirtilmedi</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 font-bold block">Uzmanlık:</span>
+                        <div class="flex flex-wrap gap-1 mt-0.5">
+                            {% for sp in u.uzmanlik_alanlari %}
+                                <span class="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md font-bold">{{ sp }}</span>
+                            {% else %}
+                                <span class="text-slate-400 italic">Belirtilmedi</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Onayla / Reddet Butonları -->
+                <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                    <form action="/admin/users/approve/{{ u.id }}" method="POST">
+                        <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-2xs active:scale-95">
+                            ✓ Başvuruyu Onayla
+                        </button>
+                    </form>
+                    <form action="/admin/users/reject/{{ u.id }}" method="POST" onsubmit="return confirm('Bu başvuruyu reddetmek istediğinize emin misiniz?');">
+                        <button type="submit" class="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl transition border border-rose-200 active:scale-95">
+                            ✕ Reddet
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 text-center space-y-1 shadow-2xs">
+                <span class="text-2xl">✨</span>
+                <p class="text-xs font-bold text-slate-700">Bekleyen Başvuru Yok</p>
+                <p class="text-[10px] text-slate-400">Şu anda onay bekleyen yeni bir emlakçı kaydı bulunmuyor.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 2. AKTİF ÜYELER LİSTESİ -->
+    <div class="space-y-3 pt-2">
+        <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">Onaylı Aktif Üyeler ({{ active_users|length }})</h2>
+        <div class="space-y-2">
+            {% for au in active_users %}
+            <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200/80 text-xs">
+                <div class="flex items-center gap-2.5 truncate">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-black flex items-center justify-center shrink-0">
+                        {{ (au.ad_soyad[:2] if au.ad_soyad else 'EM').upper() }}
+                    </div>
+                    <div class="truncate">
+                        <p class="font-bold text-slate-900 truncate">{{ au.ad_soyad }}</p>
+                        <p class="text-[10px] text-slate-400 truncate">{{ au.sirket_unvani or 'Broker' }}</p>
+                    </div>
+                </div>
+                <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-bold shrink-0">
+                    Aktif
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

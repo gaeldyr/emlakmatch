@@ -1,0 +1,189 @@
+{% extends "company/layout.html" %}
+
+{% block title %}Dashboard - Proje Yönetim Konsolu{% endblock %}
+{% block header_title %}Dashboard Genel Bakış{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- ================= 1. 8'Lİ OPERASYONEL KPI METRİK KUTULARI ================= -->
+    <div class="grid grid-cols-4 gap-4">
+        
+        <!-- 1. Aktif Projeler -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block tracking-wide">Aktif Projeler</span>
+            <div class="flex items-baseline justify-between mt-2">
+                <span class="text-2xl font-black text-slate-900">{{ active_projects_count }}</span>
+                <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">Yayında</span>
+            </div>
+        </div>
+
+        <!-- 2. Toplam Partner -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block tracking-wide">Toplam Partner</span>
+            <div class="flex items-baseline justify-between mt-2">
+                <span class="text-2xl font-black text-slate-900">{{ total_partners_count }}</span>
+                <span class="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">Danışman</span>
+            </div>
+        </div>
+
+        <!-- 3. Bu Ay Müşteri Kayıtları -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block tracking-wide">Bu Ay Müşteri Kayıtları</span>
+            <div class="flex items-baseline justify-between mt-2">
+                <span class="text-2xl font-black text-slate-900">{{ month_registrations_count }}</span>
+                <span class="text-[10px] font-extrabold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">Doğrulandı</span>
+            </div>
+        </div>
+
+        <!-- 4. Görüşmedeki Müşteriler -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block tracking-wide">Görüşmedeki Müşteriler</span>
+            <div class="flex items-baseline justify-between mt-2">
+                <span class="text-2xl font-black text-slate-900">{{ meeting_customers_count }}</span>
+                <span class="text-[10px] font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">Sıcak Lead</span>
+            </div>
+        </div>
+
+        <!-- 5. Rezervasyonlar -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block tracking-wide">Rezervasyonlar</span>
+            <div class="flex items-baseline justify-between mt-2">
+                <span class="text-2xl font-black text-slate-900">{{ reservations_count }}</span>
+                <span class="text-[10px] font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">Kapora/Opsiyon</span>
+            </div>
+        </div>
+
+        <!-- 6. Satışlar -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block tracking-wide">Satışlar</span>
+            <div class="flex items-baseline justify-between mt-2">
+                <span class="text-2xl font-black text-slate-900">{{ sales_count }}</span>
+                <span class="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">Kapatıldı</span>
+            </div>
+        </div>
+
+        <!-- 7. Toplam Satış Hacmi -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block tracking-wide">Toplam Satış Hacmi</span>
+            <div class="flex items-baseline justify-between mt-2">
+                <span class="text-lg font-black text-slate-900">{{ '{:,}'.format(total_sales_volume).replace(',', '.') }} TL</span>
+            </div>
+        </div>
+
+        <!-- 8. Komisyon Ödemesi -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[11px] font-bold text-slate-400 block tracking-wide">Komisyon Hakediş</span>
+            <div class="flex items-baseline justify-between mt-2">
+                <span class="text-lg font-black text-emerald-700">{{ '{:,}'.format(total_commission_paid).replace(',', '.') }} TL</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= 2. SON PROJELERİM TABLOSU & KAMPANYA KARTI ================= -->
+    <div class="grid grid-cols-3 gap-6 items-start">
+        
+        <!-- Sol: Son Projelerim Tablosu (2 Kolon Genişliğinde) -->
+        <div class="col-span-2 bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div>
+                    <h2 class="text-sm font-extrabold text-slate-900 tracking-tight">Son Projelerim</h2>
+                    <p class="text-[11px] text-slate-400 font-semibold">Yayındaki portföyünüz ve performansları</p>
+                </div>
+                <a href="/company/projects" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 transition">
+                    Tümünü Gör ›
+                </a>
+            </div>
+
+            {% if recent_projects and recent_projects|length > 0 %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                            <th class="py-2.5 px-3">Proje Adı</th>
+                            <th class="py-2.5 px-3">Lokasyon</th>
+                            <th class="py-2.5 px-3">Komisyon</th>
+                            <th class="py-2.5 px-3 text-center">Stok</th>
+                            <th class="py-2.5 px-3 text-center">Partner</th>
+                            <th class="py-2.5 px-3 text-center">Satış</th>
+                            <th class="py-2.5 px-3 text-right">Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-xs font-bold text-slate-700 divide-y divide-slate-100">
+                        {% for p in recent_projects %}
+                        <tr class="hover:bg-slate-50/80 transition group">
+                            <td class="py-3 px-3">
+                                <a href="/projects/detail/{{ p.id }}" class="text-slate-900 font-extrabold group-hover:text-emerald-700 transition flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span>{{ p.ad }}</span>
+                                </a>
+                            </td>
+                            <td class="py-3 px-3 text-slate-500 font-medium">{{ p.ilce }} / {{ p.il }}</td>
+                            <td class="py-3 px-3 text-emerald-700 font-black">%{{ p.partner_komisyon_orani }}</td>
+                            <td class="py-3 px-3 text-center text-slate-600">{{ p.stok_adeti or '-' }}</td>
+                            <td class="py-3 px-3 text-center text-slate-600">{{ p.partner_count or 0 }}</td>
+                            <td class="py-3 px-3 text-center font-black text-slate-900">{{ p.sales_count or 0 }}</td>
+                            <td class="py-3 px-3 text-right">
+                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black {% if p.durum == 'Aktif' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-slate-100 text-slate-500{% endif %}">
+                                    {{ p.durum }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="py-10 text-center space-y-2">
+                <p class="text-xs text-slate-400 font-bold">Henüz kayıtlı projeniz bulunmuyor.</p>
+                <a href="/company/projects/add" class="inline-block px-4 py-2 bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-xs">İlk Projenizi Ekleyin</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sağ: Bu Projeye Özel Kampanya Kartı (1 Kolon Genişliğinde) -->
+        <div class="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">Öne Çıkan Kampanya</h3>
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            </div>
+
+            {% if featured_project %}
+            <div class="space-y-3">
+                <div class="relative h-44 rounded-2xl overflow-hidden shadow-sm group">
+                    <img src="{{ featured_project.kapak_fotografi or 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80' }}" 
+                         class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-3.5 text-white">
+                        <span class="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider">{{ featured_project.ad }}</span>
+                        <h4 class="text-xs font-black leading-tight mt-0.5">{{ featured_project.odeme_plani or 'Eylül Özel Fırsatı: %5 Peşin İndirim Avantajı' }}</h4>
+                        <span class="text-[9px] text-slate-300 mt-1">Son Tarih: 30 Eylül 2026</span>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs space-y-1">
+                    <div class="flex justify-between font-bold text-[11px]">
+                        <span class="text-slate-500">Komisyon Taahhüdü:</span>
+                        <span class="text-emerald-700 font-extrabold">%{{ featured_project.partner_komisyon_orani }} Net</span>
+                    </div>
+                    <div class="flex justify-between font-bold text-[11px]">
+                        <span class="text-slate-500">Bölge:</span>
+                        <span class="text-slate-800">{{ featured_project.ilce }}, {{ featured_project.il }}</span>
+                    </div>
+                </div>
+
+                <a href="/company/campaigns" class="block w-full text-center py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl transition shadow-xs">
+                    Kampanyayı Yönet ›
+                </a>
+            </div>
+            {% else %}
+            <div class="py-8 text-center text-xs text-slate-400">
+                Henüz aktif bir kampanya tanımlanmadı.
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

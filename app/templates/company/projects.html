@@ -1,0 +1,324 @@
+{% extends "company/layout.html" %}
+
+{% block title %}Projelerim - EMLAKMATCH{% endblock %}
+{% block header_title %}Portföy & Proje Yönetimi{% endblock %}
+
+{% block content %}
+<div class="space-y-6 pb-12">
+    <!-- Üst Başlık ve Aksiyon -->
+    <div class="flex items-center justify-between bg-white rounded-3xl p-6 border border-slate-200/90 shadow-2xs">
+        <div>
+            <h1 class="text-base font-black text-slate-900 tracking-tight">Projelerim</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Yayındaki aktif ve pasif portföyünüzün yönetimi (Toplam {{ projects|length }} Proje)</p>
+        </div>
+        <a href="/company/projects/add" class="theme-bg-primary theme-hover-bg text-white font-extrabold text-xs py-2.5 px-4 rounded-xl transition shadow-sm active:scale-95 flex items-center gap-2">
+            <span>+ Yeni Proje Ekle</span>
+        </a>
+    </div>
+
+    <!-- Proje Kartları Grid Görünümü -->
+    <div class="grid grid-cols-2 gap-6">
+        {% if projects and projects|length > 0 %}
+            {% for p in projects %}
+            <!-- Tıklanabilir Proje Kartı -->
+            <div onclick="openProjectQuickDetail(this)"
+                 data-id="{{ p.id }}"
+                 data-ad="{{ p.ad }}"
+                 data-tip="{{ p.proje_tipi }}"
+                 data-il="{{ p.il }}"
+                 data-ilce="{{ p.ilce }}"
+                 data-bolge="{{ p.bolge or '' }}"
+                 data-durum="{{ p.durum }}"
+                 data-min="{{ p.min_fiyat or 0 }}"
+                 data-max="{{ p.max_fiyat or 0 }}"
+                 data-komisyon="{{ p.partner_komisyon_orani }}"
+                 data-vipkomisyon="{{ p.kurucu_ofis_komisyon_orani or p.partner_komisyon_orani }}"
+                 data-stok="{{ p.stok_adeti or 0 }}"
+                 data-toplam="{{ p.toplam_unite or 0 }}"
+                 data-teslim="{{ p.teslim_tarihi or 'Hemen' }}"
+                 data-aciklama="{{ p.aciklama or '' }}"
+                 data-odeme="{{ p.odeme_plani or '' }}"
+                 data-kapak="{{ p.kapak_fotografi or 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80' }}"
+                 data-galeri='{% if p.galeri %}{{ p.galeri|tojson }}{% else %}[]{% endif %}'
+                 data-planlar='{% if p.kat_planlari %}{{ p.kat_planlari|tojson }}{% else %}[]{% endif %}'
+                 data-brosur="{{ p.brosur_url or '' }}"
+                 class="group bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between cursor-pointer hover:border-slate-300">
+                
+                <div>
+                    <!-- Kapak Fotoğrafı & Rozetler -->
+                    <div class="h-44 bg-slate-100 relative group overflow-hidden">
+                        <img src="{{ p.kapak_fotografi or 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80' }}" 
+                             class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                        
+                        <span class="absolute top-3 left-3 theme-bg-primary text-white text-[11px] font-black px-2.5 py-1 rounded-xl shadow-sm">
+                            %{{ p.partner_komisyon_orani }} Net Komisyon
+                        </span>
+
+                        <span class="absolute top-3 right-3 text-[10px] font-black px-2.5 py-1 rounded-xl shadow-sm {% if p.durum == 'Aktif' %}bg-white theme-text-dark{% else %}bg-slate-900 text-white{% endif %}">
+                            {{ p.durum }}
+                        </span>
+
+                        {% if p.galeri and p.galeri|length > 0 %}
+                        <span class="absolute bottom-3 right-3 bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                            📷 {{ p.galeri|length + 1 }} Görsel
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- İçerik Detayları -->
+                    <div class="p-5 space-y-3">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="text-sm font-black text-slate-900 leading-tight group-hover:theme-text-primary transition-colors">{{ p.ad }}</h3>
+                                <span class="text-xs font-semibold text-slate-400 block mt-0.5">📍 {{ p.ilce }}, {{ p.il }} {% if p.bolge %}({{ p.bolge }}){% endif %}</span>
+                            </div>
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-bold rounded-lg">
+                                {{ p.proje_tipi }}
+                            </span>
+                        </div>
+
+                        <div class="p-2.5 theme-bg-light border theme-border-light rounded-2xl flex items-center justify-between">
+                            <span class="text-[11px] font-bold theme-text-dark">Fiyat Aralığı</span>
+                            <span class="text-xs font-black theme-text-dark">
+                                {{ '{:,}'.format(p.min_fiyat).replace(',', '.') }} - {{ '{:,}'.format(p.max_fiyat).replace(',', '.') }} TL
+                            </span>
+                        </div>
+
+                        <!-- Mini Metrikler -->
+                        <div class="grid grid-cols-3 gap-2 text-center text-[11px] font-bold text-slate-700 pt-1">
+                            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <span class="text-[9px] text-slate-400 block uppercase font-bold">Kalan Stok</span>
+                                <span>{{ p.stok_adeti or 0 }} Ünite</span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <span class="text-[9px] text-slate-400 block uppercase font-bold">Toplam</span>
+                                <span>{{ p.toplam_unite or 0 }} Ünite</span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <span class="text-[9px] text-slate-400 block uppercase font-bold">Teslim</span>
+                                <span class="truncate block">{{ p.teslim_tarihi or 'Hemen' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alt Yönetim Butonları -->
+                <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2" onclick="event.stopPropagation()">
+                    <a href="/projects/detail/{{ p.id }}" target="_blank" class="text-xs font-bold text-slate-600 hover:text-slate-900 transition flex items-center gap-1">
+                        <span>Ağ Görünümü</span>
+                        <span>↗</span>
+                    </a>
+
+                    <div class="flex items-center gap-2">
+                        <a href="/company/projects/edit/{{ p.id }}" class="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition shadow-2xs">
+                            ✏️ Düzenle
+                        </a>
+                        <form action="/company/projects/delete/{{ p.id }}" method="POST" onsubmit="return confirm('Projeyi kaldırmak veya pasife almak istediğinize emin misiniz?');">
+                            <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition shadow-2xs">
+                                Kaldır
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-span-2 bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-3">
+                <div class="w-14 h-14 rounded-2xl theme-bg-light theme-text-dark flex items-center justify-center mx-auto text-xl font-bold">
+                    🏢
+                </div>
+                <h3 class="text-sm font-black text-slate-800">Henüz Kayıtlı Proje Bulunmuyor</h3>
+                <p class="text-xs text-slate-400 max-w-sm mx-auto">Emlakçı ağının projenizi satabilmesi ve müşteri yönlendirmesi yapabilmesi için ilk projenizi ekleyin.</p>
+                <div class="pt-2">
+                    <a href="/company/projects/add" class="inline-block theme-bg-primary theme-hover-bg text-white font-black text-xs py-3 px-6 rounded-2xl shadow-xs transition">
+                        İlk Projenizi Oluşturun
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================= PROJE HIZLI DETAY / ÖNİZLEME MODALI ================= -->
+<div id="projectDetailModal" onclick="closeProjectQuickDetail()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-200 p-4">
+    <div id="projectDetailContent" onclick="event.stopPropagation()" class="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden transform scale-95 transition-transform duration-200 max-h-[90vh] flex flex-col justify-between">
+        
+        <!-- Modal Başlık Barı -->
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+            <div class="flex items-center gap-2.5">
+                <span id="modalProjType" class="px-2.5 py-0.5 text-[10px] font-black uppercase rounded-lg theme-bg-light theme-text-dark">Konut</span>
+                <h3 id="modalProjTitle" class="text-sm font-black text-slate-900 truncate">Proje Detayı</h3>
+            </div>
+            <button onclick="closeProjectQuickDetail()" class="w-8 h-8 rounded-xl bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-700 font-bold flex items-center justify-center transition border border-slate-200">✕</button>
+        </div>
+
+        <!-- Modal İçeriği (Kaydırılabilir) -->
+        <div class="p-6 overflow-y-auto custom-scrollbar space-y-5 text-xs">
+            
+            <!-- Kapak & Galeri Görselleri -->
+            <div class="space-y-2">
+                <div class="w-full h-56 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 relative">
+                    <img id="modalProjCover" src="" class="w-full h-full object-cover">
+                    <span id="modalProjStatus" class="absolute top-3 right-3 px-2.5 py-1 bg-white theme-text-dark text-[10px] font-black rounded-xl shadow-xs">Aktif</span>
+                </div>
+                <div id="modalProjGalleryList" class="flex gap-2 overflow-x-auto pb-1 custom-scrollbar"></div>
+            </div>
+
+            <!-- Fiyat & Komisyon Şartları -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-3.5 theme-bg-light border theme-border-light rounded-2xl">
+                    <span class="text-[10px] font-bold text-slate-400 block uppercase">Fiyat Aralığı</span>
+                    <span id="modalProjPrice" class="text-sm font-black theme-text-dark block mt-0.5">0 TL</span>
+                </div>
+                <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span class="text-[10px] font-bold text-slate-400 block uppercase">Danışman Primleri</span>
+                    <span id="modalProjCommissions" class="text-xs font-black text-slate-900 block mt-0.5">Standart: %3 | VIP: %4</span>
+                </div>
+            </div>
+
+            <!-- Stok & Lokasyon -->
+            <div class="grid grid-cols-4 gap-2 text-center text-xs font-bold text-slate-700">
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <span class="text-[9px] text-slate-400 block uppercase">Konum</span>
+                    <span id="modalProjLocation" class="truncate block">İstanbul</span>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <span class="text-[9px] text-slate-400 block uppercase">Kalan Stok</span>
+                    <span id="modalProjStock">-</span>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <span class="text-[9px] text-slate-400 block uppercase">Toplam Ünite</span>
+                    <span id="modalProjTotal">-</span>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <span class="text-[9px] text-slate-400 block uppercase">Teslim</span>
+                    <span id="modalProjDelivery" class="truncate block">-</span>
+                </div>
+            </div>
+
+            <!-- Açıklama & Nitelikler -->
+            <div class="space-y-2">
+                <span class="text-[11px] font-black text-slate-900 uppercase tracking-wider block">Proje Açıklaması & Nitelikleri</span>
+                <p id="modalProjDesc" class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-600 leading-relaxed font-semibold whitespace-pre-line"></p>
+            </div>
+
+            <!-- Ödeme Planı -->
+            <div id="modalProjPaymentBox" class="space-y-1.5 hidden">
+                <span class="text-[11px] font-black text-slate-900 uppercase tracking-wider block">Ödeme & Vade Koşulları</span>
+                <p id="modalProjPayment" class="p-3.5 theme-bg-light border theme-border-light rounded-2xl theme-text-dark font-bold"></p>
+            </div>
+
+            <!-- Kat Planları ve Broşür -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                <div id="modalBrochureBox" class="hidden">
+                    <a id="modalBrochureLink" href="#" target="_blank" class="px-3.5 py-2 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl inline-flex items-center gap-1.5 transition">
+                        <span>📄 Proje Kataloğunu İncele (PDF)</span>
+                    </a>
+                </div>
+                <a id="modalOpenDetailLink" href="#" target="_blank" class="text-xs font-extrabold theme-text-primary hover:underline ml-auto">
+                    Danışman Sayfasında Gör ↗
+                </a>
+            </div>
+
+        </div>
+
+        <!-- Modal Alt Aksiyon -->
+        <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3 shrink-0">
+            <a id="modalEditBtn" href="#" class="flex-1 py-2.5 bg-white hover:bg-slate-100 text-slate-800 font-extrabold text-xs text-center border border-slate-200 rounded-xl transition shadow-2xs">
+                ✏️ Projeyi Düzenle
+            </a>
+            <button type="button" onclick="closeProjectQuickDetail()" class="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-xl transition">
+                Pencereyi Kapat
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function openProjectQuickDetail(card) {
+        const id = card.getAttribute('data-id');
+        const ad = card.getAttribute('data-ad');
+        const tip = card.getAttribute('data-tip');
+        const il = card.getAttribute('data-il');
+        const ilce = card.getAttribute('data-ilce');
+        const bolge = card.getAttribute('data-bolge');
+        const durum = card.getAttribute('data-durum');
+        const minF = Number(card.getAttribute('data-min') || 0);
+        const maxF = Number(card.getAttribute('data-max') || 0);
+        const kom = card.getAttribute('data-komisyon');
+        const vipKom = card.getAttribute('data-vipkomisyon');
+        const stok = card.getAttribute('data-stok');
+        const toplam = card.getAttribute('data-toplam');
+        const teslim = card.getAttribute('data-teslim');
+        const aciklama = card.getAttribute('data-aciklama');
+        const odeme = card.getAttribute('data-odeme');
+        const kapak = card.getAttribute('data-kapak');
+        const brosur = card.getAttribute('data-brosur');
+
+        let galeri = [];
+        try {
+            galeri = JSON.parse(card.getAttribute('data-galeri') || '[]');
+        } catch(e) { galeri = []; }
+
+        document.getElementById('modalProjType').innerText = tip;
+        document.getElementById('modalProjTitle').innerText = ad;
+        document.getElementById('modalProjStatus').innerText = durum;
+        document.getElementById('modalProjCover').src = kapak;
+        
+        document.getElementById('modalProjPrice').innerText = `${minF.toLocaleString('tr-TR')} - ${maxF.toLocaleString('tr-TR')} TL`;
+        document.getElementById('modalProjCommissions').innerText = `Standart: %${kom} | VIP: %${vipKom}`;
+        
+        document.getElementById('modalProjLocation').innerText = `${ilce}, ${il}` + (bolge ? ` (${bolge})` : '');
+        document.getElementById('modalProjStock').innerText = `${stok} Ünite`;
+        document.getElementById('modalProjTotal').innerText = `${toplam} Ünite`;
+        document.getElementById('modalProjDelivery').innerText = teslim;
+        
+        document.getElementById('modalProjDesc').innerText = aciklama || 'Proje hakkında detaylı açıklama girilmemiş.';
+        
+        const payBox = document.getElementById('modalProjPaymentBox');
+        if (odeme && odeme.trim()) {
+            payBox.classList.remove('hidden');
+            document.getElementById('modalProjPayment').innerText = odeme;
+        } else {
+            payBox.classList.add('hidden');
+        }
+
+        const brochBox = document.getElementById('modalBrochureBox');
+        if (brosur && brosur.trim()) {
+            brochBox.classList.remove('hidden');
+            document.getElementById('modalBrochureLink').href = brosur;
+        } else {
+            brochBox.classList.add('hidden');
+        }
+
+        // Galeri Küçük Resimlerini Doldur
+        const galContainer = document.getElementById('modalProjGalleryList');
+        galContainer.innerHTML = '';
+        if (galeri && galeri.length > 0) {
+            galeri.forEach(gUrl => {
+                const imgThumb = document.createElement('img');
+                imgThumb.src = gUrl;
+                imgThumb.className = "w-16 h-12 rounded-xl object-cover border border-slate-200 shrink-0 cursor-pointer hover:opacity-80 transition";
+                imgThumb.onclick = () => { document.getElementById('modalProjCover').src = gUrl; };
+                galContainer.appendChild(imgThumb);
+            });
+        }
+
+        document.getElementById('modalOpenDetailLink').href = `/projects/detail/${id}`;
+        document.getElementById('modalEditBtn').href = `/company/projects/edit/${id}`;
+
+        const modal = document.getElementById('projectDetailModal');
+        const content = document.getElementById('projectDetailContent');
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('scale-95');
+    }
+
+    function closeProjectQuickDetail() {
+        const modal = document.getElementById('projectDetailModal');
+        const content = document.getElementById('projectDetailContent');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('scale-95');
+    }
+</script>
+{% endblock %}

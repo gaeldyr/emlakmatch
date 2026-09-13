@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}İşbirliği Detayı - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-8 max-w-md mx-auto">
+    <!-- Üst Başlık -->
+    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <a href="/collaborations/my" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+        </a>
+        <h1 class="text-sm font-extrabold text-slate-900 tracking-tight">İşbirliği Detayı</h1>
+        <div class="w-6"></div>
+    </div>
+
+    <!-- 1. PORTFÖY ÖZETİ -->
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-2xs space-y-3">
+        <div class="flex items-center justify-between">
+            <span class="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-lg">
+                {{ portfolio.gayrimenkul_tipi or 'Mülk' }}
+            </span>
+            <span class="text-xs font-black text-emerald-700">
+                {{ '{:,}'.format(portfolio.fiyat).replace(',', '.') if portfolio.fiyat else '0' }} TL
+            </span>
+        </div>
+
+        <h2 class="text-sm font-extrabold text-slate-900">
+            {{ portfolio.gayrimenkul_tipi or 'Gayrimenkul' }} - {{ portfolio.ilce or 'Bölge' }}
+        </h2>
+
+        <!-- Resim -->
+        <div class="w-full h-44 rounded-2xl bg-slate-100 overflow-hidden border border-slate-100 shadow-inner">
+            <img src="{{ portfolio.ana_fotograf if portfolio.ana_fotograf else 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80' }}" class="w-full h-full object-cover">
+        </div>
+
+        <!-- Açık Lokasyon -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 block uppercase">Açık Konum</span>
+            <p class="text-xs font-extrabold text-slate-800">
+                📍 {{ portfolio.il or 'İstanbul' }} / {{ portfolio.ilce or '' }} {% if portfolio.mahalle_site %}- {{ portfolio.mahalle_site }}{% endif %}
+            </p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold text-slate-600 pt-1">
+            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">{{ portfolio.oda or '-' }} Oda</div>
+            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">{{ portfolio.m2 or '-' }} m²</div>
+            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">{{ collab.isbirligi_kosulu or '%50' }}</div>
+        </div>
+
+        {% if portfolio.kisa_aciklama %}
+        <p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100 leading-relaxed">
+            {{ portfolio.kisa_aciklama }}
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- 2. MESLEKTAŞ KARTI & MESAJ BUTONU -->
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-2xs space-y-3">
+        <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider">İşbirliği Ortağınız</span>
+        
+        <div class="flex items-center gap-3">
+            <div data-user-avatar 
+                 data-user-id="{{ other_user.id }}" 
+                 data-user-name="{{ other_user.ad_soyad }}" 
+                 data-user-office="{{ other_user.sirket_unvani or 'Gayrimenkul Danışmanı' }}" 
+                 data-user-photo="{{ other_user.profil_foto or '' }}" 
+                 class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center shrink-0 border border-emerald-200 overflow-hidden cursor-pointer select-none">
+                {% if other_user.profil_foto %}
+                    <img src="{{ other_user.profil_foto }}" class="w-full h-full object-cover">
+                {% else %}
+                    {{ (other_user.ad_soyad[:2] if other_user.ad_soyad else 'EM').upper() }}
+                {% endif %}
+            </div>
+
+            <div class="flex-1 min-w-0">
+                <h3 class="text-xs font-extrabold text-slate-900 truncate">{{ other_user.ad_soyad or 'Meslektaşınız' }}</h3>
+                <p class="text-[11px] text-slate-400 truncate">{{ other_user.sirket_unvani or 'Gayrimenkul Danışmanı' }}</p>
+                <p class="text-[10px] text-emerald-700 font-bold mt-0.5">📞 {{ other_user.telefon or 'Belirtilmedi' }}</p>
+            </div>
+        </div>
+
+        <a href="/messages/{{ other_user.id }}?collab_id={{ collab.id }}" class="flex items-center justify-center gap-2 w-full py-3 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.99] text-emerald-800 font-extrabold text-xs rounded-2xl border border-emerald-200 transition">
+            <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Meslektaşınla Mesajlaş</span>
+        </a>
+    </div>
+
+    <!-- 3. ÇİFT TARAFLI SATIŞ KAPATMA (DUAL-CONFIRMATION) -->
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-2xs space-y-3">
+        <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">Satış & Sonuçlandırma Durumu</h3>
+        
+        <div class="space-y-2 text-xs font-bold">
+            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span class="text-slate-600">Sizin Onayınız:</span>
+                {% if my_approval %}
+                    <span class="text-emerald-700 font-black flex items-center gap-1">✓ Onaylandı</span>
+                {% else %}
+                    <span class="text-amber-700 font-black">⏳ Bekliyor</span>
+                {% endif %}
+            </div>
+
+            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span class="text-slate-600">Meslektaşınızın Onayı:</span>
+                {% if other_approval %}
+                    <span class="text-emerald-700 font-black flex items-center gap-1">✓ Onaylandı</span>
+                {% else %}
+                    <span class="text-amber-700 font-black">⏳ Bekliyor</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if collab.durum != 'Tamamlandı' %}
+            {% if not my_approval %}
+            <form action="/collaborations/approve-success/{{ collab.id }}" method="POST">
+                <button type="submit" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-black text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Satışı Başarılı Olarak Onayla</span>
+                </button>
+            </form>
+            {% else %}
+            <div class="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold rounded-2xl text-center">
+                ⏳ Onayınız sisteme kaydedildi. Meslektaşınızın da onaylaması bekleniyor.
+            </div>
+            {% endif %}
+
+            <form action="/collaborations/close-failed/{{ collab.id }}" method="POST" class="pt-1">
+                <button type="submit" class="w-full py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-500 font-bold text-xs rounded-2xl transition">
+                    ✕ Anlaşma Sağlanamadı (İşbirliğini Sonlandır)
+                </button>
+            </form>
+        {% else %}
+            <div class="p-3.5 bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-black rounded-2xl text-center space-y-1">
+                <p>Tebrikler! İki tarafın teyidiyle işlem başarıyla tamamlandı.</p>
+                <a href="/collaborations/review/{{ collab.id }}" class="inline-block mt-1 underline text-emerald-800 text-[11px]">Meslektaşınızı Puanlayın ›</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

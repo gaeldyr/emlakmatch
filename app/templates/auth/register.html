@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Kayıt Ol - EMLAKMATCH{% endblock %}
+
+{% block bottom_nav %}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto min-h-[85vh] flex flex-col justify-between pb-6">
+    <div>
+        <!-- Üst Bar & Dinamik Geri Tuşu -->
+        <div class="flex items-center justify-between pb-2 pt-1 border-b border-slate-100">
+            <button type="button" onclick="handleBack()" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+                <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6"/>
+                </svg>
+            </button>
+            <h1 id="pageHeading" class="text-sm font-extrabold text-slate-900 tracking-tight">Emlakçı Kaydı</h1>
+            <div class="w-6"></div>
+        </div>
+
+        <!-- ROL SEÇİMİ: EMLAKÇI / ŞİRKET (YEŞİL, KABARTMALI, NEGATİF/POZİTİF HOVER) -->
+        <div class="my-3">
+            <div class="grid grid-cols-2 gap-2 p-1.5 bg-emerald-100/60 rounded-2xl border border-emerald-200">
+                <button type="button" 
+                        id="btnRoleAgent" 
+                        onclick="switchRegisterRole('agent')" 
+                        class="py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 shadow-sm border border-emerald-600 bg-emerald-600 text-white hover:bg-white hover:text-emerald-800">
+                    Emlakçı Kaydı
+                </button>
+
+                <button type="button" 
+                        id="btnRoleCompany" 
+                        onclick="switchRegisterRole('company')" 
+                        class="py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-600 hover:text-white">
+                    Şirket Kaydı
+                </button>
+            </div>
+        </div>
+
+        <!-- 1 - 2 Adım Göstergesi -->
+        <div class="flex items-center justify-center gap-3 py-2 mb-2">
+            <div class="flex items-center gap-1.5">
+                <span id="stepBadge1" class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">1</span>
+                <span id="stepText1" class="text-[10px] font-extrabold text-emerald-800">Temel Bilgiler</span>
+            </div>
+            <div id="stepLine" class="w-8 h-0.5 bg-slate-200 transition-colors"></div>
+            <div class="flex items-center gap-1.5">
+                <span id="stepBadge2" class="w-5 h-5 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-bold">2</span>
+                <span id="stepText2" class="text-[10px] font-bold text-slate-400">Kurumsal Detay</span>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="mb-3 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form id="multiStepRegisterForm" action="/register" method="POST" enctype="multipart/form-data" class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-2xs space-y-3.5">
+            <input type="hidden" name="firma_tipi" id="hiddenFirmaTipi" value="{{ 'sirket' if register_type == 'company' else 'emlakci' }}">
+
+            <!-- ================= ADIM 1 ================= -->
+            <div id="sectionStep1" class="space-y-3">
+                <!-- Profil / Logo Fotoğrafı -->
+                <div class="flex flex-col items-center justify-center pb-2">
+                    <label for="avatarInput" class="relative cursor-pointer group">
+                        <div id="avatarPreviewBox" class="w-20 h-20 rounded-3xl bg-slate-100 border-2 border-dashed border-emerald-300 flex items-center justify-center text-slate-400 overflow-hidden group-hover:border-emerald-500 transition">
+                            <svg class="w-8 h-8 stroke-current text-slate-300" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <span class="absolute -bottom-1 -right-1 bg-emerald-600 text-white rounded-full p-1 shadow-xs text-xs">📷</span>
+                    </label>
+                    <input type="file" id="avatarInput" name="profil_foto" accept="image/*" class="hidden" onchange="previewAvatar(event)">
+                    <span id="avatarLabel" class="text-[10px] text-slate-400 mt-1 font-semibold">Profil Fotoğrafı Ekle</span>
+                </div>
+
+                <!-- Davet Kodu (Şirket seçildiğinde gizlenir) -->
+                <div id="inviteCodeBox" class="p-2.5 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                    <label class="block text-[10px] font-extrabold text-emerald-900 uppercase mb-1">Davet Kodu *</label>
+                    <input type="text" name="davet_kodu" id="davet_kodu" placeholder="Örn: EMLAK2026 veya EM-XXXXXX" class="w-full px-3 py-2 bg-white border border-emerald-300 rounded-lg text-xs font-black uppercase text-emerald-950 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+
+                <!-- Ad / Yetkili Adı -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label id="lblAd" class="block text-[11px] font-bold text-slate-600 mb-1">Adınız *</label>
+                        <input type="text" name="ad" id="ad" required placeholder="Ahmet" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label id="lblSoyad" class="block text-[11px] font-bold text-slate-600 mb-1">Soyadınız *</label>
+                        <input type="text" name="soyad" id="soyad" placeholder="Yılmaz" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Telefon -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Telefon Numarası *</label>
+                    <input type="tel" name="telefon" id="telefon" required placeholder="0532 123 45 67" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+                </div>
+
+                <!-- E-Posta -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">E-Posta Adresiniz *</label>
+                    <input type="email" name="eposta" id="eposta" required placeholder="ornek@alanadi.com" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+                </div>
+
+                <!-- Şifre -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Şifre *</label>
+                        <input type="password" name="sifre" id="sifre" required placeholder="••••••••" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Şifre Tekrarı *</label>
+                        <input type="password" name="sifre_tekrar" id="sifre_tekrar" required placeholder="••••••••" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+                    </div>
+                </div>
+                <p id="passError" class="text-[10px] text-rose-600 font-bold hidden">Şifreler uyuşmuyor.</p>
+            </div>
+
+            <!-- ================= ADIM 2 ================= -->
+            <div id="sectionStep2" class="space-y-3.5 hidden">
+                <!-- Şirket Unvanı -->
+                <div>
+                    <label id="lblCompany" class="block text-[11px] font-bold text-slate-600 mb-1">Şirket / Ofis Adı *</label>
+                    <input type="text" name="sirket_unvani" id="sirket_unvani" placeholder="Örn: ABC Gayrimenkul A.Ş." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+                </div>
+
+                <!-- Marka Adı -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Ticari Marka (Varsa)</label>
+                    <input type="text" name="marka_adi" placeholder="Örn: ABC İnşaat / ABC Geliştirme" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+                </div>
+
+                <!-- Belge Yükleme -->
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                    <label id="lblDocument" class="block text-[11px] font-extrabold text-slate-800">Taşınmaz Ticareti Yetki Belgesi</label>
+                    <input type="text" name="yetki_belgesi_no" id="yetki_belgesi_no" placeholder="Belge / Sicil No" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none">
+                    <input type="file" name="yetki_belgesi" accept="image/*,.pdf" class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700">
+                </div>
+
+                <!-- İlçeler (Sadece Emlakçı) -->
+                <div id="districtSection">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] font-bold text-slate-600">Çalıştığınız İlçeler</label>
+                        <span id="districtBadge" class="text-[10px] font-bold text-emerald-700">0 seçildi</span>
+                    </div>
+                    <input type="hidden" name="calistigi_ilceler" id="selectedDistrictsInput" value="">
+                    
+                    <div class="flex flex-wrap gap-1.5 p-2.5 bg-slate-50 rounded-2xl border border-slate-200/80 max-h-36 overflow-y-auto">
+                        {% for d in ["Beşiktaş", "Beykoz", "Çekmeköy", "Sarıyer", "Kadıköy", "Şişli", "Üsküdar", "Bakırköy", "Ataşehir", "Maltepe", "Başakşehir", "Beylikdüzü"] %}
+                        <button type="button" onclick="toggleDistrict('{{ d }}', this)" class="district-chip px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-[10px] font-semibold text-slate-600 hover:border-emerald-300 transition">
+                            + {{ d }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Uzmanlık Alanları (Sadece Emlakçı) -->
+                <div id="specialtySection">
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5">Uzmanlık Alanları</label>
+                    <input type="hidden" name="uzmanlik_alanlari" id="selectedSpecialtiesInput" value="">
+                    
+                    <div class="grid grid-cols-4 gap-1.5 text-center text-xs">
+                        {% for sp in ["Konut", "Villa", "Ticari", "Arsa"] %}
+                        <button type="button" onclick="toggleSpecialty('{{ sp }}', this)" class="specialty-chip py-2 px-1 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 text-[11px] font-bold transition">
+                            {{ sp }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Butonlar (Negatif/Pozitif Hover) -->
+            <div class="pt-2">
+                <button type="button" id="btnContinue" onclick="goToStep2()" class="w-full bg-emerald-600 hover:bg-white text-white hover:text-emerald-700 border-2 border-emerald-600 font-black py-3.5 rounded-xl text-xs transition-all duration-200 shadow-sm active:scale-[0.99]">
+                    Devam Et ›
+                </button>
+                <button type="submit" id="btnSubmit" class="w-full bg-emerald-600 hover:bg-white text-white hover:text-emerald-700 border-2 border-emerald-600 font-black py-3.5 rounded-xl text-xs transition-all duration-200 shadow-sm active:scale-[0.99] hidden">
+                    Başvuruyu Tamamla
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Giriş Linki -->
+    <div class="text-center pt-4">
+        <p class="text-xs text-slate-500">
+            Zaten üyeliğiniz var mı? 
+            <a href="/login" class="font-bold text-emerald-700 hover:underline">Giriş Yapın</a>
+        </p>
+    </div>
+</div>
+
+<script>
+    let currentStep = 1;
+    let currentRole = "{{ 'company' if register_type == 'company' else 'agent' }}";
+    let selectedDistricts = [];
+    let selectedSpecialties = [];
+
+    function switchRegisterRole(role) {
+        currentRole = role;
+        const btnAgent = document.getElementById('btnRoleAgent');
+        const btnCompany = document.getElementById('btnRoleCompany');
+        const hiddenFirma = document.getElementById('hiddenFirmaTipi');
+        const heading = document.getElementById('pageHeading');
+        const inviteBox = document.getElementById('inviteCodeBox');
+        const inviteInput = document.getElementById('davet_kodu');
+        const lblAd = document.getElementById('lblAd');
+        const lblSoyad = document.getElementById('lblSoyad');
+        const soyadInput = document.getElementById('soyad');
+        const lblCompany = document.getElementById('lblCompany');
+        const lblDoc = document.getElementById('lblDocument');
+        const avatarLabel = document.getElementById('avatarLabel');
+        const districtSec = document.getElementById('districtSection');
+        const specialtySec = document.getElementById('specialtySection');
+
+        if (role === 'agent') {
+            hiddenFirma.value = 'emlakci';
+            btnAgent.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 shadow-sm border border-emerald-600 bg-emerald-600 text-white hover:bg-white hover:text-emerald-800';
+            btnCompany.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-600 hover:text-white';
+            
+            heading.innerText = 'Emlakçı Kaydı';
+            inviteBox.classList.remove('hidden');
+            inviteInput.required = true;
+            lblAd.innerText = 'Adınız *';
+            lblSoyad.innerText = 'Soyadınız *';
+            soyadInput.required = true;
+            lblCompany.innerText = 'Şirket / Ofis Adı *';
+            lblDoc.innerText = 'Taşınmaz Ticareti Yetki Belgesi';
+            avatarLabel.innerText = 'Profil Fotoğrafı Ekle';
+            districtSec.classList.remove('hidden');
+            specialtySec.classList.remove('hidden');
+        } else {
+            hiddenFirma.value = 'sirket';
+            btnCompany.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 shadow-sm border border-emerald-600 bg-emerald-600 text-white hover:bg-white hover:text-emerald-800';
+            btnAgent.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-600 hover:text-white';
+            
+            heading.innerText = 'Proje Firması / Şirket Kaydı';
+            inviteBox.classList.add('hidden');
+            inviteInput.required = false;
+            inviteInput.value = '';
+            lblAd.innerText = 'Yetkili Adı *';
+            lblSoyad.innerText = 'Yetkili Soyadı';
+            soyadInput.required = false;
+            lblCompany.innerText = 'Şirket Ticari Unvanı (Müteahhitlik / Geliştirici) *';
+            lblDoc.innerText = 'Vergi Levhası / Faaliyet Belgesi';
+            avatarLabel.innerText = 'Şirket Logosu Ekle';
+            districtSec.classList.add('hidden');
+            specialtySec.classList.add('hidden');
+        }
+    }
+
+    function previewAvatar(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const box = document.getElementById('avatarPreviewBox');
+                box.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function goToStep2() {
+        const ad = document.getElementById('ad').value.trim();
+        const eposta = document.getElementById('eposta').value.trim();
+        const tel = document.getElementById('telefon').value.trim();
+        const pass = document.getElementById('sifre').value;
+        const pass2 = document.getElementById('sifre_tekrar').value;
+        const kod = document.getElementById('davet_kodu').value.trim();
+
+        if (currentRole === 'agent') {
+            const soyad = document.getElementById('soyad').value.trim();
+            if (!ad || !soyad || !eposta || !tel || !pass || !kod) {
+                alert("Lütfen tüm zorunlu alanları doldurun.");
+                return;
+            }
+        } else {
+            if (!ad || !eposta || !tel || !pass) {
+                alert("Lütfen zorunlu alanları doldurun.");
+                return;
+            }
+        }
+
+        if (pass !== pass2) {
+            document.getElementById('passError').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('passError').classList.add('hidden');
+
+        document.getElementById('sectionStep1').classList.add('hidden');
+        document.getElementById('sectionStep2').classList.remove('hidden');
+
+        document.getElementById('stepBadge2').className = "w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs";
+        document.getElementById('stepText2').className = "text-[10px] font-extrabold text-emerald-800";
+        document.getElementById('stepLine').className = "w-8 h-0.5 bg-emerald-600 transition-colors";
+
+        document.getElementById('btnContinue').classList.add('hidden');
+        document.getElementById('btnSubmit').classList.remove('hidden');
+        currentStep = 2;
+    }
+
+    function handleBack() {
+        if (currentStep === 2) {
+            document.getElementById('sectionStep2').classList.add('hidden');
+            document.getElementById('sectionStep1').classList.remove('hidden');
+
+            document.getElementById('stepBadge2').className = "w-5 h-5 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-bold";
+            document.getElementById('stepText2').className = "text-[10px] font-bold text-slate-400";
+            document.getElementById('stepLine').className = "w-8 h-0.5 bg-slate-200 transition-colors";
+
+            document.getElementById('btnSubmit').classList.add('hidden');
+            document.getElementById('btnContinue').classList.remove('hidden');
+            currentStep = 1;
+        } else {
+            window.location.href = '/login';
+        }
+    }
+
+    function toggleDistrict(d, btn) {
+        const idx = selectedDistricts.indexOf(d);
+        if (idx > -1) {
+            selectedDistricts.splice(idx, 1);
+            btn.className = "district-chip px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-[10px] font-semibold text-slate-600 hover:border-emerald-300 transition";
+            btn.innerText = `+ ${d}`;
+        } else {
+            selectedDistricts.push(d);
+            btn.className = "district-chip px-2.5 py-1 bg-emerald-50 border-2 border-emerald-600 rounded-xl text-[10px] font-bold text-emerald-900 transition shadow-xs";
+            btn.innerText = `✓ ${d}`;
+        }
+        document.getElementById('selectedDistrictsInput').value = selectedDistricts.join(',');
+        document.getElementById('districtBadge').innerText = `${selectedDistricts.length} seçildi`;
+    }
+
+    function toggleSpecialty(sp, btn) {
+        const idx = selectedSpecialties.indexOf(sp);
+        if (idx > -1) {
+            selectedSpecialties.splice(idx, 1);
+            btn.className = "specialty-chip py-2 px-1 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 text-[11px] font-bold transition";
+        } else {
+            selectedSpecialties.push(sp);
+            btn.className = "specialty-chip py-2 px-1 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-900 text-[11px] font-extrabold transition shadow-xs";
+        }
+        document.getElementById('selectedSpecialtiesInput').value = selectedSpecialties.join(',');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        switchRegisterRole(currentRole);
+    });
+</script>
+{% endblock %}

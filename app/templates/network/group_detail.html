@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}{{ group.ad }} - Grup Ağı{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-12 max-w-md mx-auto">
+    <!-- Üst Başlık & Geri Tuşu -->
+    <div class="flex items-center justify-between pb-2 border-b border-emerald-900/10 pt-1">
+        <a href="/network?tab=gruplar" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </a>
+        <h1 class="text-xs font-black text-slate-900 tracking-tight truncate max-w-[200px]">{{ group.ad }}</h1>
+        <div class="w-6"></div>
+    </div>
+
+    <!-- Grup Künye Kartı -->
+    <div class="bg-[#F8FAF9] border border-emerald-200/90 rounded-3xl p-4 shadow-xs space-y-3">
+        <div class="flex items-center justify-between">
+            <span class="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-lg border border-emerald-200/70 shadow-2xs">
+                {{ group.kategori or 'Bölge Ağı' }}
+            </span>
+            <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                <svg class="w-3.5 h-3.5 stroke-current text-emerald-600" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>{{ members_count }} Üye</span>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-sm font-black text-slate-900">{{ group.ad }}</h2>
+            <p class="text-xs text-slate-600 mt-1 leading-relaxed">{{ group.aciklama }}</p>
+        </div>
+
+        <div class="pt-2 border-t border-emerald-900/10 flex items-center justify-between gap-2">
+            {% if is_member %}
+                <button type="button" onclick="openShareModal()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-2xl transition shadow-xs flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>İş / Portföy Paylaş</span>
+                </button>
+                <form action="/network/groups/leave/{{ group.id }}" method="POST" onsubmit="return confirm('Bu gruptan ayrılmak istediğinize emin misiniz?');">
+                    <button type="submit" class="py-2.5 px-3 bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-700 font-bold text-xs rounded-2xl transition border border-slate-200/80 shadow-2xs">
+                        Ayrıl
+                    </button>
+                </form>
+            {% else %}
+                <form action="/network/groups/join/{{ group.id }}" method="POST" class="w-full">
+                    <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-2xl transition shadow-xs flex items-center justify-center gap-1.5">
+                        <span>Bu Ağa Katıl</span>
+                        <span class="text-sm leading-none">›</span>
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtre Sekmeleri (Kabartmalı Zümrüt Butonlar) -->
+    <div class="grid grid-cols-4 gap-1 bg-[#EEF4F0] p-1 rounded-2xl text-[11px] font-bold text-center border border-emerald-900/5">
+        <a href="/network/groups/{{ group.id }}?filter_type=all" class="py-2 rounded-xl transition flex items-center justify-center gap-1 {% if filter_type == 'all' %}bg-white text-emerald-800 shadow-xs border border-emerald-100{% else %}text-slate-600 hover:text-emerald-700{% endif %}">
+            <span>Tümü</span>
+        </a>
+        <a href="/network/groups/{{ group.id }}?filter_type=portfolio" class="py-2 rounded-xl transition flex items-center justify-center gap-1 {% if filter_type == 'portfolio' %}bg-white text-emerald-800 shadow-xs border border-emerald-100{% else %}text-slate-600 hover:text-emerald-700{% endif %}">
+            <svg class="w-3 h-3 stroke-current shrink-0" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>
+            <span>Portföy</span>
+        </a>
+        <a href="/network/groups/{{ group.id }}?filter_type=buyer_request" class="py-2 rounded-xl transition flex items-center justify-center gap-1 {% if filter_type == 'buyer_request' %}bg-white text-emerald-800 shadow-xs border border-emerald-100{% else %}text-slate-600 hover:text-emerald-700{% endif %}">
+            <svg class="w-3 h-3 stroke-current shrink-0" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span>Alıcı</span>
+        </a>
+        <a href="/network/groups/{{ group.id }}?filter_type=referral" class="py-2 rounded-xl transition flex items-center justify-center gap-1 {% if filter_type == 'referral' %}bg-white text-emerald-800 shadow-xs border border-emerald-100{% else %}text-slate-600 hover:text-emerald-700{% endif %}">
+            <svg class="w-3 h-3 stroke-current shrink-0" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <span>Müşteri</span>
+        </a>
+    </div>
+
+    <!-- Yapılandırılmış Gönderi Akışı (B2B Kartları) -->
+    <div class="space-y-3 pt-1">
+        {% if posts and posts|length > 0 %}
+            {% for post in posts %}
+            <div class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3">
+                <!-- Üst Paylaşan Bilgisi ve Gönderi Rozeti -->
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 border border-emerald-200 overflow-hidden shadow-2xs">
+                            {% if post.author and post.author.profil_foto %}
+                                <img src="{{ post.author.profil_foto }}" class="w-full h-full object-cover">
+                            {% else %}
+                                {{ (post.author.ad_soyad[:2] if post.author and post.author.ad_soyad else 'EM').upper() }}
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-900">{{ post.author.ad_soyad if post.author else 'Meslektaş' }}</h3>
+                            <p class="text-[10px] text-slate-400">{{ post.author.sirket_unvani or 'Danışman' }}</p>
+                        </div>
+                    </div>
+
+                    {% if post.post_type == 'portfolio' %}
+                        <span class="text-[9px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs">
+                            <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>
+                            <span>PORTFÖY</span>
+                        </span>
+                    {% elif post.post_type == 'buyer_request' %}
+                        <span class="text-[9px] font-black bg-emerald-100/70 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs">
+                            <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <span>HAZIR ALICI</span>
+                        </span>
+                    {% elif post.post_type == 'referral' %}
+                        <span class="text-[9px] font-black bg-slate-100 text-slate-800 border border-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs">
+                            <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                            <span>YÖNLENDİRME</span>
+                        </span>
+                    {% else %}
+                        <span class="text-[9px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs">
+                            <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <span>DUYURU</span>
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- Gönderi Başlık & Detay -->
+                <div>
+                    <h4 class="text-xs font-black text-slate-900">{{ post.baslik }}</h4>
+                    {% if post.icerik %}
+                    <p class="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-wrap">{{ post.icerik }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Bağlı Portföy Kartı -->
+                {% if post.portfolio %}
+                <div class="flex items-center gap-3 p-2.5 bg-[#FAFDFB] border border-emerald-200/90 rounded-2xl shadow-2xs">
+                    <img src="{{ post.portfolio.ana_fotograf or 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=300&q=80' }}" class="w-14 h-14 rounded-xl object-cover shrink-0 border border-slate-100">
+                    <div class="flex-1 min-w-0">
+                        <span class="text-[9px] font-extrabold text-emerald-700 uppercase tracking-wider">{{ post.portfolio.gayrimenkul_tipi }}</span>
+                        <p class="text-xs font-black text-slate-900 truncate">{{ post.portfolio.ilce }}</p>
+                        <p class="text-xs font-black text-emerald-700 mt-0.5">
+                            {{ '{:,}'.format(post.portfolio.fiyat).replace(',', '.') if post.portfolio.fiyat else 'Fiyat Yok' }} TL
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Alt Aksiyon Çubuğu -->
+                <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-[10px] text-slate-400 font-medium">
+                        {{ post.created_at[:10] if post.created_at else '' }}
+                    </span>
+                    <a href="/messages/{{ post.author_id }}" class="text-[11px] font-black text-emerald-700 hover:text-emerald-800 flex items-center gap-1.5 transition">
+                        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <span>Mesaj Gönder</span>
+                        <span class="text-xs font-bold leading-none">›</span>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-8 text-center space-y-3 shadow-2xs">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto text-emerald-700">
+                    <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-xs font-bold text-slate-800">Bu Grupta Henüz Paylaşım Yok</h3>
+                    <p class="text-[11px] text-slate-400 max-w-xs mx-auto">İlk portföy veya hazır alıcı talebini paylaşarak ağı hareketlendirin.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================= YAPILANDIRILMIŞ GÖNDERİ PAYLAŞIM MODALI ================= -->
+<div id="sharePostModal" onclick="closeShareModal()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="sharePostContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-[#FAFDFB] rounded-t-3xl p-5 space-y-4 shadow-2xl border-t border-emerald-100 transform translate-y-full transition-transform duration-300 max-h-[85vh] overflow-y-auto">
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto"></div>
+        
+        <div class="flex items-center justify-between pb-2 border-b border-emerald-900/10">
+            <h3 class="text-xs font-black text-slate-900 uppercase tracking-tight">Grupta İş Paylaş</h3>
+            <button onclick="closeShareModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">✕</button>
+        </div>
+
+        <form action="/network/groups/{{ group.id }}/post" method="POST" class="space-y-3 text-xs">
+            <!-- Paylaşım Türü Seçimi (Kabartmalı Butonlar) -->
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1.5">Paylaşım Türü</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" onclick="setPostType('portfolio', this)" class="post-type-btn p-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-emerald-900 font-extrabold text-[11px] transition shadow-xs flex flex-col items-center gap-1">
+                        <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>
+                        <span>Portföy</span>
+                    </button>
+                    <button type="button" onclick="setPostType('buyer_request', this)" class="post-type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 font-bold text-[11px] transition flex flex-col items-center gap-1 shadow-2xs">
+                        <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <span>Hazır Alıcı</span>
+                    </button>
+                    <button type="button" onclick="setPostType('referral', this)" class="post-type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 font-bold text-[11px] transition flex flex-col items-center gap-1 shadow-2xs">
+                        <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                        <span>Müşteri Pasla</span>
+                    </button>
+                </div>
+                <input type="hidden" name="post_type" id="hiddenPostType" value="portfolio">
+            </div>
+
+            <!-- Bağlı Portföy Seçimi -->
+            <div id="portfolioSelectSection">
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Mevcut Portföyünüzü Bağlayın (Opsiyonel)</label>
+                <select name="portfolio_id" class="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs">
+                    <option value="none">Portföy seçilmedi (Yalnızca metin)</option>
+                    {% for p in my_portfolios %}
+                    <option value="{{ p.id }}">{{ p.gayrimenkul_tipi }} - {{ p.ilce }} ({{ '{:,}'.format(p.fiyat).replace(',', '.') if p.fiyat else '0' }} TL)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Başlık -->
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Paylaşım Başlığı</label>
+                <input type="text" name="baslik" id="postTitleInput" required placeholder="Örn: Beykoz Acarkent 5+1 Satılık Müstakil Villa" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-2xs">
+            </div>
+
+            <!-- Detay Açıklaması -->
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Detaylar & Meslektaş Notu</label>
+                <textarea name="icerik" rows="3" placeholder="Fiyat, ortak satış detayları, randevu durumu..." class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-2xs leading-relaxed"></textarea>
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-xl transition shadow-xs">
+                    Grupta Yayınla
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openShareModal() {
+        const modal = document.getElementById('sharePostModal');
+        const content = document.getElementById('sharePostContent');
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeShareModal() {
+        const modal = document.getElementById('sharePostModal');
+        const content = document.getElementById('sharePostContent');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function setPostType(type, btn) {
+        document.getElementById('hiddenPostType').value = type;
+        document.querySelectorAll('.post-type-btn').forEach(b => {
+            b.className = 'post-type-btn p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 font-bold text-[11px] transition flex flex-col items-center gap-1 shadow-2xs';
+        });
+        btn.className = 'post-type-btn p-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-emerald-900 font-extrabold text-[11px] transition shadow-xs flex flex-col items-center gap-1';
+
+        const portSec = document.getElementById('portfolioSelectSection');
+        const titleInput = document.getElementById('postTitleInput');
+
+        if (type === 'portfolio') {
+            portSec.classList.remove('hidden');
+            titleInput.placeholder = "Örn: Beykoz Acarkent 5+1 Satılık Müstakil Villa";
+        } else if (type === 'buyer_request') {
+            portSec.classList.add('hidden');
+            titleInput.placeholder = "Örn: Beşiktaş'ta 25M TL bütçeli 3+1 hazır alıcı";
+        } else {
+            portSec.classList.add('hidden');
+            titleInput.placeholder = "Örn: Antalya Konyaaltı'nda satılık mülkü olan müşteri yönlendirilecektir";
+        }
+    }
+</script>
+{% endblock %}

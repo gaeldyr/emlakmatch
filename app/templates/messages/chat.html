@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}{{ other_user.ad_soyad or 'Sohbet' }} - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<!-- Ana Kapsayıcı: is_blocked verisini HTML attribute olarak taşıyoruz -->
+<div id="chatRoot" 
+     data-current-user-id="{{ current_user_id }}"
+     data-other-user-id="{{ other_user.id }}"
+     data-collab-id="{{ collab_id or '' }}"
+     data-is-blocked="{% if is_blocked %}true{% else %}false{% endif %}"
+     class="max-w-md mx-auto h-[calc(100vh-100px)] flex flex-col justify-between bg-slate-50/50">
+    
+    <!-- Üst Bar (Dinamik Geri Dönüşlü & Kurumsal Temalı) -->
+    <div class="flex items-center justify-between px-3 py-2.5 bg-white border-b border-slate-100 shrink-0 shadow-2xs">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='{% if collab_id %}/collaborations/detail/{{ collab_id }}{% else %}/messages{% endif %}';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+                <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5">
+                    <path d="m15 18-6-6 6-6"/>
+                </svg>
+            </button>
+
+            <!-- Avatar (Long-Press Aktif) -->
+            <div data-user-avatar 
+                 data-user-id="{{ other_user.id }}" 
+                 data-user-name="{{ other_user.ad_soyad }}" 
+                 data-user-office="{{ other_user.sirket_unvani or 'Doğrulanmış Broker' }}" 
+                 data-user-photo="{{ other_user.profil_foto or '' }}" 
+                 class="w-10 h-10 rounded-2xl theme-bg-light theme-text-dark font-extrabold text-xs flex items-center justify-center shrink-0 overflow-hidden border theme-border-light shadow-2xs cursor-pointer select-none">
+                {% if other_user.profil_foto %}
+                    <img src="{{ other_user.profil_foto }}" alt="{{ other_user.ad_soyad }}" class="w-full h-full object-cover">
+                {% else %}
+                    {{ (other_user.ad_soyad[:2] if other_user.ad_soyad else 'EM').upper() }}
+                {% endif %}
+            </div>
+
+            <div class="min-w-0">
+                <h1 class="text-xs font-black text-slate-900 truncate leading-tight">{{ other_user.ad_soyad or 'Meslektaşınız' }}</h1>
+                <p class="text-[10px] theme-text-primary font-semibold truncate">{{ other_user.sirket_unvani or 'Doğrulanmış Broker' }}</p>
+            </div>
+        </div>
+
+        {% if other_user.telefon and not is_blocked %}
+        <a href="tel:{{ other_user.telefon }}" 
+           class="px-2.5 py-1.5 rounded-xl theme-bg-light theme-text-dark hover:opacity-90 active:scale-95 transition border theme-border-light text-[11px] font-bold flex items-center gap-1 shrink-0">
+            <span>📞</span> <span>Ara</span>
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Mesaj Listesi -->
+    <div id="messagesContainer" class="flex-1 overflow-y-auto px-3 py-4 space-y-2.5 custom-scrollbar">
+        {% if messages and messages|length > 0 %}
+            {% for msg in messages %}
+                {% if msg.gonderen_id|string == current_user_id|string %}
+                    <div class="flex justify-end message-row" data-id="{{ msg.id }}">
+                        <div class="max-w-[80%] theme-bg-primary text-white rounded-2xl rounded-tr-xs px-3.5 py-2 text-xs shadow-2xs space-y-0.5">
+                            <p class="leading-relaxed break-words whitespace-pre-wrap">{{ msg.mesaj_metni }}</p>
+                            <div class="text-[9px] text-white/80 text-right time-label" data-utc="{{ msg.created_at }}"></div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="flex justify-start message-row" data-id="{{ msg.id }}">
+                        <div class="max-w-[80%] bg-white text-slate-800 border border-slate-200/80 rounded-2xl rounded-tl-xs px-3.5 py-2 text-xs shadow-2xs space-y-0.5">
+                            <p class="leading-relaxed break-words whitespace-pre-wrap">{{ msg.mesaj_metni }}</p>
+                            <div class="text-[9px] text-slate-400 text-right time-label" data-utc="{{ msg.created_at }}"></div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div id="emptyPlaceholder" class="text-center py-16 px-4 space-y-2">
+                <div class="w-12 h-12 rounded-full theme-bg-light theme-text-dark flex items-center justify-center mx-auto text-xl border theme-border-light">
+                    💬
+                </div>
+                <p class="text-xs font-bold text-slate-700">Sohbet Başlatılmadı</p>
+                <p class="text-[11px] text-slate-400 max-w-xs mx-auto">
+                    Müşteri randevusu veya işbirliği şartları hakkında ilk mesajı yazın.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Mesaj Alanı -->
+    {% if is_blocked %}
+        <div class="p-3.5 bg-rose-50 border-t border-rose-200 text-center text-rose-700 text-xs font-bold shrink-0 space-y-1">
+            <p>🚫 Bu kullanıcıyla aranızdaki iletişim engellenmiştir.</p>
+            <p class="text-[10px] font-medium text-rose-600">Karşılıklı mesaj gönderimi ve işbirliği teklifleri kapatılmıştır.</p>
+        </div>
+    {% else %}
+        <form id="chatForm" onsubmit="handleSendMessage(event)" class="p-2.5 bg-white border-t border-slate-100 shrink-0 shadow-xs">
+            <div class="flex items-center gap-2">
+                <input type="text" 
+                       id="messageInput" 
+                       required 
+                       autocomplete="off" 
+                       placeholder="Mesajınızı yazın..." 
+                       class="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-2 focus:theme-border-primary focus:outline-none transition shadow-2xs">
+                
+                <button type="submit" 
+                        id="sendBtn"
+                        class="theme-bg-primary theme-hover-bg active:scale-95 text-white p-2.5 rounded-2xl transition shadow-xs shrink-0 flex items-center justify-center">
+                    <svg class="w-4 h-4 fill-current rotate-90" viewBox="0 0 24 24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    {% endif %}
+</div>
+
+<script>
+    const chatRoot = document.getElementById('chatRoot');
+    const currentUserId = chatRoot.getAttribute('data-current-user-id');
+    const otherUserId = chatRoot.getAttribute('data-other-user-id');
+    const collabId = chatRoot.getAttribute('data-collab-id');
+    const isBlocked = chatRoot.getAttribute('data-is-blocked') === 'true';
+
+    const container = document.getElementById('messagesContainer');
+    const input = document.getElementById('messageInput');
+
+    function formatTime(isoString) {
+        if (!isoString) return new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+        try {
+            let dateStr = isoString;
+            if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
+                dateStr += 'Z';
+            }
+            const d = new Date(dateStr);
+            return d.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+        } catch(e) {
+            return '';
+        }
+    }
+
+    function localizeExistingTimes() {
+        document.querySelectorAll('.time-label').forEach(el => {
+            const raw = el.getAttribute('data-utc');
+            if (raw) el.textContent = formatTime(raw);
+        });
+    }
+
+    function scrollToBottom() {
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        localizeExistingTimes();
+        scrollToBottom();
+        if (typeof attachLongPressListeners === 'function') attachLongPressListeners();
+    });
+
+    async function handleSendMessage(e) {
+        e.preventDefault();
+        if (isBlocked) return;
+
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+        input.focus();
+
+        const ph = document.getElementById('emptyPlaceholder');
+        if (ph) ph.style.display = 'none';
+
+        const tempId = 'temp-' + Date.now();
+        const localTimeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+
+        const tempRow = document.createElement('div');
+        tempRow.dataset.id = tempId;
+        tempRow.className = "flex justify-end message-row";
+        tempRow.innerHTML = `
+            <div class="max-w-[80%] theme-bg-primary text-white rounded-2xl rounded-tr-xs px-3.5 py-2 text-xs shadow-2xs space-y-0.5">
+                <p class="leading-relaxed break-words whitespace-pre-wrap">${escapeHtml(text)}</p>
+                <div class="text-[9px] text-white/80 text-right">${localTimeStr}</div>
+            </div>
+        `;
+        container.appendChild(tempRow);
+        scrollToBottom();
+
+        const formData = new FormData();
+        formData.append('receiver_id', otherUserId);
+        formData.append('message', text);
+        if (collabId && collabId !== 'None') {
+            formData.append('collab_id', collabId);
+        }
+
+        try {
+            const res = await fetch('/messages/api/send', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success && data.message && data.message.id) {
+                tempRow.dataset.id = data.message.id;
+            } else if (!data.success && data.error) {
+                alert(data.error);
+                tempRow.remove();
+            }
+        } catch (err) {
+            console.error("Mesaj gönderilemedi:", err);
+        }
+    }
+
+    async function pollNewMessages() {
+        if (isBlocked) return;
+        try {
+            const res = await fetch(`/messages/api/poll/${otherUserId}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const msgs = data.messages || [];
+
+            if (msgs.length > 0) {
+                const ph = document.getElementById('emptyPlaceholder');
+                if (ph) ph.style.display = 'none';
+
+                const existingIds = new Set(Array.from(document.querySelectorAll('.message-row')).map(el => el.dataset.id).filter(Boolean));
+
+                let hasNew = false;
+                msgs.forEach(m => {
+                    if (m.id && !existingIds.has(String(m.id))) {
+                        hasNew = true;
+                        const isMe = String(m.gonderen_id) === String(currentUserId);
+                        const time = formatTime(m.created_at);
+                        
+                        const row = document.createElement('div');
+                        row.dataset.id = m.id;
+                        row.className = `flex ${isMe ? 'justify-end' : 'justify-start'} message-row`;
+                        row.innerHTML = `
+                            <div class="max-w-[80%] ${isMe ? 'theme-bg-primary text-white rounded-tr-xs' : 'bg-white text-slate-800 border border-slate-200/80 rounded-tl-xs'} rounded-2xl px-3.5 py-2 text-xs shadow-2xs space-y-0.5">
+                                <p class="leading-relaxed break-words whitespace-pre-wrap">${escapeHtml(m.mesaj_metni)}</p>
+                                <div class="text-[9px] ${isMe ? 'text-white/80' : 'text-slate-400'} text-right">${time}</div>
+                            </div>
+                        `;
+                        container.appendChild(row);
+                    }
+                });
+
+                if (hasNew) scrollToBottom();
+            }
+        } catch (e) {
+            console.error("Mesaj yoklama hatası:", e);
+        }
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/[&<>"']/g, function(m) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[m];
+        });
+    }
+
+    setInterval(pollNewMessages, 2500);
+</script>
+{% endblock %}

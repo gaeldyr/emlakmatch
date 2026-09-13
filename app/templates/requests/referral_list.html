@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Müşteri Yönlendirmeleri - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-12 max-w-md mx-auto">
+    <!-- Üst Başlık (Yeni Pasla butonu kaldırıldı) -->
+    <div class="flex items-center justify-between pb-2 border-b border-emerald-900/10 pt-1">
+        <a href="/profile" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </a>
+        <h1 class="text-sm font-black text-slate-900 tracking-tight">Müşteri Yönlendirmeleri</h1>
+        <div class="w-6"></div>
+    </div>
+
+    <!-- İki Sekmeli Navigasyon (İnce Yeşil Çerçeveli, Yönlendirmelerim İsimli) -->
+    <div class="grid grid-cols-2 bg-[#F8FAF9] p-1.5 rounded-2xl border border-emerald-200/90 gap-1.5 text-xs font-black text-center shadow-2xs">
+        <a href="/requests/referral/list?tab=gelen" 
+           class="py-2.5 rounded-xl transition-all duration-200 {% if tab == 'gelen' %}bg-emerald-600 text-white shadow-xs{% else %}text-slate-600 hover:text-emerald-700 bg-transparent{% endif %}">
+            Bana Gelenler
+        </a>
+        <a href="/requests/referral/list?tab=giden" 
+           class="py-2.5 rounded-xl transition-all duration-200 {% if tab == 'giden' %}bg-emerald-600 text-white shadow-xs{% else %}text-slate-600 hover:text-emerald-700 bg-transparent{% endif %}">
+            Yönlendirmelerim
+        </a>
+    </div>
+
+    <!-- Yönlendirme Kayıtları -->
+    <div class="space-y-3 pt-1">
+        {% if referrals and referrals|length > 0 %}
+            {% for r in referrals %}
+            <div class="bg-[#F8FAF9] border border-emerald-200/90 rounded-3xl p-4 shadow-2xs space-y-3">
+                
+                <!-- Kart Başlığı & Durum -->
+                <div class="flex items-center justify-between border-b border-emerald-900/10 pb-2.5">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                            {{ r.gayrimenkul_tipi or 'Gayrimenkul' }}
+                        </span>
+                        <span class="text-xs font-black text-slate-800">{{ r.il }} / {{ r.ilce }}</span>
+                    </div>
+
+                    {% if r.durum == 'beklemede' %}
+                        <span class="text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">
+                            Onay Bekliyor
+                        </span>
+                    {% elif r.durum == 'kabul_edildi' %}
+                        <span class="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-md">
+                            Kabul Edildi
+                        </span>
+                    {% elif r.durum == 'reddedildi' %}
+                        <span class="text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md">
+                            Reddedildi
+                        </span>
+                    {% else %}
+                        <span class="text-[10px] font-extrabold bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-md">
+                            {{ r.durum|upper }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- Müşteri ve Koşul Bilgileri -->
+                <div class="space-y-1.5 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400 font-bold text-[11px]">Müşteri:</span>
+                        <span class="font-extrabold text-slate-900">{{ r.display_name }}</span>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400 font-bold text-[11px]">Telefon:</span>
+                        <span class="font-mono font-black text-slate-900">{{ r.display_phone }}</span>
+                    </div>
+
+                    {% if r.musteri_butcesi %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400 font-bold text-[11px]">Bütçe:</span>
+                        <span class="font-black text-emerald-700">{{ '{:,}'.format(r.musteri_butcesi).replace(',', '.') }} TL</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400 font-bold text-[11px]">Şart:</span>
+                        <span class="font-extrabold text-slate-800 bg-white border border-slate-200 px-2 py-0.5 rounded-md text-[11px]">{{ r.isbirligi_kosulu }}</span>
+                    </div>
+
+                    {% if r.ek_not %}
+                    <div class="p-2.5 bg-white border border-slate-200/80 rounded-xl text-[11px] text-slate-600 leading-relaxed mt-2">
+                        "{{ r.ek_not }}"
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Meslektaş Bilgisi -->
+                <div class="pt-2 border-t border-emerald-900/10 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                    {% if tab == 'gelen' %}
+                        <span>Yönlendiren: <strong class="text-slate-800">{{ r.gonderen.ad_soyad if r.gonderen else 'Meslektaşınız' }}</strong></span>
+                    {% else %}
+                        <span>Hedef Danışman: <strong class="text-slate-800">{{ r.alici.ad_soyad if r.alici else 'Meslektaşınız' }}</strong></span>
+                    {% endif %}
+                </div>
+
+                <!-- Aksiyonlar (Bana Gelenler sekmesinde Kabul / Red) -->
+                {% if tab == 'gelen' and r.durum == 'beklemede' %}
+                <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                    <form action="/requests/referral/respond/{{ r.id }}" method="POST">
+                        <input type="hidden" name="action" value="accept">
+                        <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl transition shadow-2xs active:scale-95">
+                            Kabul Et
+                        </button>
+                    </form>
+                    <form action="/requests/referral/respond/{{ r.id }}" method="POST" onsubmit="return confirm('Bu müşteri yönlendirmesini reddetmek istediğinize emin misiniz?');">
+                        <input type="hidden" name="action" value="reject">
+                        <button type="submit" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition active:scale-95">
+                            Reddet
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+
+            </div>
+            {% endfor %}
+        {% else %}
+            <!-- Boş Durum Kartı (Emojiden Arındırılmış, İnce Yeşil Kenarlıklı) -->
+            <div class="bg-[#F8FAF9] rounded-3xl border border-emerald-200/80 p-8 text-center space-y-2 shadow-2xs">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto shadow-2xs">
+                    <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </div>
+                <h3 class="text-xs font-black text-slate-800">Yönlendirme Kaydı Yok</h3>
+                <p class="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+                    Şu anda bu sekmede listelenecek müşteri yönlendirme hareketi bulunmuyor.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

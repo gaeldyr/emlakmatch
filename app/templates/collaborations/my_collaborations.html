@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+
+{% block title %}İşbirliklerim - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="space-y-4 pb-8 max-w-md mx-auto">
+    <!-- Üst Başlık & Portföylerim Butonu -->
+    <div class="flex items-center justify-between pt-1">
+        <div>
+            <h1 class="text-base font-extrabold text-slate-900 tracking-tight">İşbirliklerim</h1>
+            <p class="text-[11px] text-slate-400">Tüm B2B ortaklık ve satış süreçleriniz</p>
+        </div>
+        <a href="/portfolios/my" class="text-xs font-bold theme-text-dark theme-bg-light px-3 py-1.5 rounded-xl border theme-border-light hover:opacity-90 transition">
+            Portföylerim
+        </a>
+    </div>
+
+    <!-- İKİ ANA KATEGORİ: PORTFÖY İŞBİRLİKLERİ vs PROJE ORTAKLIKLARI -->
+    <div class="grid grid-cols-2 p-1 theme-bg-light rounded-2xl border theme-border-light text-xs font-black">
+        <a href="/collaborations/my?tab={{ tab }}&subtab=portfoyler" 
+           class="py-2.5 text-center rounded-xl transition-all duration-200 {% if subtab == 'portfoyler' %}theme-bg-primary text-white shadow-sm{% else %}theme-text-dark hover:bg-white/50{% endif %}">
+            Portföy İşbirlikleri
+        </a>
+        <a href="/collaborations/my?tab={{ tab }}&subtab=projeler" 
+           class="py-2.5 text-center rounded-xl transition-all duration-200 {% if subtab == 'projeler' %}theme-bg-primary text-white shadow-sm{% else %}theme-text-dark hover:bg-white/50{% endif %}">
+            Proje Satış Ortaklıkları
+        </a>
+    </div>
+
+    <!-- 3 Sekmeli Durum Barı (Aktif, Bekleyen, Tamamlanan) -->
+    <div class="grid grid-cols-3 bg-slate-100/80 p-1 rounded-2xl gap-1 text-xs font-bold text-center">
+        <a href="/collaborations/my?tab=aktif&subtab={{ subtab }}" 
+           class="py-2 rounded-xl transition {% if tab == 'aktif' %}bg-white theme-text-dark shadow-xs{% else %}text-slate-500 hover:text-slate-800{% endif %}">
+            Aktif
+        </a>
+        <a href="/collaborations/my?tab=bekleyen&subtab={{ subtab }}" 
+           class="py-2 rounded-xl transition {% if tab == 'bekleyen' %}bg-white theme-text-dark shadow-xs{% else %}text-slate-500 hover:text-slate-800{% endif %}">
+            Bekleyen
+        </a>
+        <a href="/collaborations/my?tab=tamamlanan&subtab={{ subtab }}" 
+           class="py-2 rounded-xl transition {% if tab == 'tamamlanan' %}bg-white theme-text-dark shadow-xs{% else %}text-slate-500 hover:text-slate-800{% endif %}">
+            Tamamlanan
+        </a>
+    </div>
+
+    <!-- ================= 1. GÖRÜNÜM: PORTFÖY İŞBİRLİKLERİ ================= -->
+    {% if subtab == 'portfoyler' %}
+        <div class="space-y-3 pt-1">
+            {% if collaborations and collaborations|length > 0 %}
+                {% for c in collaborations %}
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-md {% if c.is_sender %}bg-blue-50 text-blue-700 border border-blue-100{% else %}bg-purple-50 text-purple-700 border border-purple-100{% endif %}">
+                            {{ c.role_text }}
+                        </span>
+
+                        {% if c.durum|lower == 'aktif' %}
+                            <span class="text-[10px] font-bold theme-bg-light theme-text-dark border theme-border-light px-2 py-0.5 rounded-md">
+                                ● Aktif Süreç
+                            </span>
+                        {% elif c.durum|lower == 'basari_onayi_bekleniyor' %}
+                            <span class="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md">
+                                ⏳ Onay Bekliyor
+                            </span>
+                        {% elif c.durum|lower == 'beklemede' %}
+                            <span class="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md">
+                                ⏳ Yanıt Bekleniyor
+                            </span>
+                        {% elif c.durum|lower == 'reddedildi' %}
+                            <span class="text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md">
+                                ✕ Reddedildi
+                            </span>
+                        {% elif c.durum|lower == 'iptal edildi' %}
+                            <span class="text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md">
+                                ⊘ İptal Edildi
+                            </span>
+                        {% elif c.durum|lower == 'başarısız' %}
+                            <span class="text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md">
+                                ✕ Başarısız
+                            </span>
+                        {% else %}
+                            <span class="text-[10px] font-bold theme-bg-light theme-text-dark border theme-border-light px-2 py-0.5 rounded-md">
+                                ✓ Tamamlandı
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div data-user-avatar 
+                             data-user-id="{{ c.other_agent_id }}" 
+                             data-user-name="{{ c.other_agent }}" 
+                             data-user-office="Doğrulanmış Broker" 
+                             data-user-photo="{{ c.other_agent_avatar or '' }}"
+                             class="w-16 h-16 rounded-xl bg-slate-100 border border-slate-100 overflow-hidden shrink-0 cursor-pointer select-none">
+                            <img src="{{ c.portfolios.ana_fotograf if c.portfolios and c.portfolios.ana_fotograf else 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=300&q=80' }}" 
+                                 alt="Gayrimenkul" 
+                                 class="w-full h-full object-cover">
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <h2 class="text-xs font-extrabold text-slate-900 truncate">
+                                {{ c.other_agent }}
+                            </h2>
+                            <p class="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                                📍 {{ c.portfolios.ilce or 'Bölge' }} / {{ c.portfolios.gayrimenkul_tipi or 'Mülk' }}
+                            </p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs font-black theme-text-dark">
+                                    {% if c.portfolios.fiyat %}{{ '{:,}'.format(c.portfolios.fiyat).replace(',', '.') }} TL{% else %}Fiyat Yok{% endif %}
+                                </span>
+                                <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                    Paylaşım: {{ c.isbirligi_kosulu or '%50' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if tab == 'bekleyen' %}
+                        <div class="pt-2 border-t border-slate-100">
+                            {% if not c.is_sender %}
+                                <div class="grid grid-cols-2 gap-2">
+                                    <form action="/collaborations/accept/{{ c.id }}" method="POST">
+                                        <button type="submit" class="w-full py-2 theme-bg-primary theme-hover-bg text-white font-bold text-xs rounded-xl transition shadow-2xs active:scale-95">
+                                            ✓ Kabul Et
+                                        </button>
+                                    </form>
+                                    <form action="/collaborations/reject/{{ c.id }}" method="POST" onsubmit="return confirm('Bu işbirliği teklifini reddetmek istediğinize emin misiniz?');">
+                                        <button type="submit" class="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl transition border border-rose-200 active:scale-95">
+                                            ✕ Reddet
+                                        </button>
+                                    </form>
+                                </div>
+                            {% else %}
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" 
+                                            data-collab-id="{{ c.id }}" 
+                                            data-terms="{{ c.isbirligi_kosulu or '%50' }}" 
+                                            onclick="openEditTermsModalFromButton(this)" 
+                                            class="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded-xl transition border border-amber-200 active:scale-95">
+                                        ✏️ Şartı Düzenle
+                                    </button>
+                                    <form action="/collaborations/cancel/{{ c.id }}" method="POST" onsubmit="return confirm('Teklifinizi geri çekmek istediğinizden emin misiniz?');">
+                                        <button type="submit" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition active:scale-95">
+                                            ⊘ İptal Et
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    {% if tab == 'aktif' %}
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <span class="text-[10px] theme-text-dark font-bold flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full theme-bg-primary animate-pulse"></span>
+                                İletişim açık
+                            </span>
+                            <a href="/collaborations/detail/{{ c.id }}" class="theme-bg-primary theme-hover-bg text-white font-bold text-[11px] px-3.5 py-1.5 rounded-xl transition shadow-2xs">
+                                Yönet & İncele ›
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if tab == 'tamamlanan' %}
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <span class="text-[10px] text-slate-400 font-semibold">
+                                Durum: {{ c.kapatma_sebebi or 'Başarılı Satış' }}
+                            </span>
+                            <div class="flex items-center gap-2">
+                                {% if c.has_reviewed %}
+                                    <span class="px-2.5 py-1.5 theme-bg-light theme-text-dark border theme-border-light rounded-xl text-xs font-bold flex items-center gap-1">
+                                        <span>✓</span> Puanlandı
+                                    </span>
+                                {% else %}
+                                    <a href="/collaborations/review/{{ c.id }}" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-extrabold flex items-center gap-1 transition active:scale-95">
+                                        <span>⭐</span> Puanla
+                                    </a>
+                                {% endif %}
+                                <a href="/collaborations/detail/{{ c.id }}" class="theme-text-primary hover:theme-text-dark text-xs font-bold">
+                                    Detayı Gör ›
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="bg-white rounded-3xl border border-slate-200/90 p-8 text-center space-y-3 shadow-2xs">
+                    <div class="w-14 h-14 rounded-2xl theme-bg-light border theme-border-light shadow-md flex items-center justify-center mx-auto theme-text-primary">
+                        <svg class="w-7 h-7 stroke-current drop-shadow-xs" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m11 17 2 2a1 1 0 0 0 1.42 0l4.24-4.24a1 1 0 0 0 0-1.42l-2.47-2.47"/>
+                            <path d="m14 5-3-3a1 1 0 0 0-1.42 0L5.34 6.24a1 1 0 0 0 0 1.42l2.47 2.47"/>
+                            <path d="M18 11l-3 3"/>
+                            <path d="m9 8 3-3"/>
+                            <circle cx="12" cy="12" r="1"/>
+                            <path d="m8 15-2 2a1 1 0 0 1-1.42 0L2 14.42a1 1 0 0 1 0-1.42L6 9"/>
+                            <path d="m16 9 2-2a1 1 0 0 1 1.42 0L22 9.58a1 1 0 0 1 0 1.42L18 15"/>
+                        </svg>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-xs font-black text-slate-800">
+                            {% if tab == 'bekleyen' %}Bekleyen İşbirliği Bulunmuyor
+                            {% elif tab == 'aktif' %}Henüz Aktif İşbirliğiniz Yok
+                            {% else %}Tamamlanan İşbirliği Kaydı Yok{% endif %}
+                        </h3>
+                        <p class="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+                            Ağdaki meslektaşlarınıza portföy yönlendirebilir veya gelen teklifleri buradan yönetebilirsiniz.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- ================= 2. GÖRÜNÜM: PROJE SATIŞ ORTAKLIKLARI (LONG-PRESS DESTEKLİ) ================= -->
+    {% if subtab == 'projeler' %}
+        <div class="space-y-3 pt-1">
+            {% if project_registrations and project_registrations|length > 0 %}
+                {% for r in project_registrations %}
+                {% set can_cancel = (r.durum|lower not in ['satış yapıldı', 'satis yapildi', 'iptal edildi', 'reddedildi']) %}
+                <div data-reg-card
+                     data-reg-id="{{ r.id }}"
+                     data-project-id="{{ r.project_id }}"
+                     data-client-name="{{ r.musteri_ad_soyad }}"
+                     data-project-name="{{ r.projects.ad if r.projects else 'Proje' }}"
+                     data-status="{{ r.durum }}"
+                     data-can-cancel="{{ 'true' if can_cancel else 'false' }}"
+                     class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3 cursor-pointer select-none transition-all duration-150 hover:shadow-md hover:theme-border-primary active:scale-[0.99]">
+                    
+                    <div class="flex items-start justify-between border-b border-slate-100 pb-2.5">
+                        <div>
+                            <span class="text-[9px] font-black font-mono text-slate-400 block uppercase">TESCİL NO: {{ r.tescil_no }}</span>
+                            <h2 class="text-sm font-extrabold text-slate-900 mt-0.5">{{ r.musteri_ad_soyad }}</h2>
+                        </div>
+
+                        {% set st = r.durum|lower %}
+                        {% if st in ['satış yapıldı', 'satis yapildi'] %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light">
+                                ✓ Satış Yapıldı
+                            </span>
+                        {% elif st == 'rezervasyon' %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200">
+                                Rezervasyon
+                            </span>
+                        {% elif st == 'yer gösterimi' %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+                                Yer Gösterimi
+                            </span>
+                        {% elif st == 'görüşmede' %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-200">
+                                Görüşmede
+                            </span>
+                        {% elif st == 'iptal edildi' %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-200">
+                                ⊘ İptal Edildi
+                            </span>
+                        {% else %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light">
+                                Doğrulandı
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Proje Bilgisi & Taahhüt Edilen Komisyon Oranı -->
+                    <div class="grid grid-cols-2 gap-2 text-[10px] bg-slate-50 p-2.5 rounded-2xl border border-slate-200/70">
+                        <div>
+                            <span class="text-slate-400 block font-bold">Proje:</span>
+                            <span class="font-extrabold text-slate-800 truncate block">{{ r.projects.ad if r.projects else 'Proje' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block font-bold">Geliştirici Firma:</span>
+                            <span class="font-extrabold text-slate-800 truncate block">
+                                {{ r.projects.users.sirket_unvani if r.projects and r.projects.users and r.projects.users.sirket_unvani else (r.projects.users.ad_soyad if r.projects and r.projects.users else 'Müteahhit Firma') }}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block font-bold">İlgi Tipi:</span>
+                            <span class="font-semibold text-slate-700">{{ r.ilgilenilen_daire_tipi or 'Belirtilmedi' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block font-bold">Komisyon Şartı:</span>
+                            <span class="font-black theme-text-dark">%{{ r.projects.partner_komisyon_orani if r.projects else '3.0' }} Net Komisyon</span>
+                        </div>
+                    </div>
+
+                    <!-- 90 Gün Koruma Sayacı -->
+                    <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
+                        <span class="text-slate-400 text-[10px]">Tescil: {{ r.created_at[:10] }}</span>
+                        <div class="flex items-center gap-1.5 font-extrabold {% if r.days_left < 15 %}text-rose-600{% else %}theme-text-dark{% endif %}">
+                            <span class="w-2 h-2 rounded-full {% if r.days_left < 15 %}bg-rose-500{% else %}theme-bg-primary{% endif %} animate-pulse"></span>
+                            <span>{{ r.days_left }} gün koruma kaldı</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="bg-white rounded-3xl border border-slate-200/90 p-8 text-center space-y-2 shadow-2xs">
+                    <h3 class="text-xs font-black text-slate-800">Bu Durumda Proje Kaydı Yok</h3>
+                    <p class="text-[11px] text-slate-500">Müteahhit projelerine yönlendirdiğiniz müşteriler burada listelenir.</p>
+                    <div class="pt-2">
+                        <a href="/projects" class="inline-block theme-bg-primary theme-hover-bg text-white font-black text-xs px-4 py-2 rounded-xl transition shadow-2xs">
+                            Proje Ağına Git
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- ================= PROJE TESCİLİ İŞLEM ÇEKMECESİ (BASILI TUTUNCA AÇILAN) ================= -->
+<div id="regActionSheet" onclick="closeRegActionSheet()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="regActionContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-3.5 shadow-2xl border-t theme-border-primary transform translate-y-full transition-transform duration-300">
+        <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto mb-1"></div>
+        <div class="text-center pb-2 border-b border-slate-100">
+            <span class="text-[9px] font-black uppercase text-slate-400 block tracking-wider">Müşteri Tescil İşlemleri</span>
+            <h4 id="sheetClientName" class="text-xs font-black text-slate-900 mt-0.5">Müşteri Adı</h4>
+            <p id="sheetProjectName" class="text-[10px] theme-text-primary font-bold mt-0.5">Proje Adı</p>
+        </div>
+
+        <div class="space-y-2 text-xs font-bold">
+            <!-- 1. Proje Detayını Gör -->
+            <a id="sheetViewProjectBtn" href="#" class="w-full py-3 px-4 bg-slate-50 hover:theme-bg-light theme-text-dark rounded-2xl flex items-center justify-between transition border border-slate-200/80">
+                <span class="flex items-center gap-2.5">
+                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    <span>Projenin Detaylarını İncele</span>
+                </span>
+                <span class="text-slate-400 text-sm">›</span>
+            </a>
+
+            <!-- 2. Tescili İptal Et -->
+            <form id="sheetCancelForm" method="POST" action="" onsubmit="return confirm('Bu müşteri tescilini ve 90 günlük koruma sürecini iptal etmek istediğinize emin misiniz?');">
+                <button type="submit" id="sheetCancelBtn" class="w-full py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-2xl flex items-center justify-between transition border border-rose-200 font-bold active:scale-[0.98]">
+                    <span class="flex items-center gap-2.5">
+                        <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        <span>Tescili / İşbirliğini İptal Et</span>
+                    </span>
+                    <span class="text-rose-400 text-sm">›</span>
+                </button>
+            </form>
+        </div>
+
+        <button type="button" onclick="closeRegActionSheet()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-xs transition mt-2">
+            Vazgeç
+        </button>
+    </div>
+</div>
+
+<!-- Şart Düzenleme Modalı -->
+<div id="editTermsModal" onclick="closeEditTermsModal()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="editTermsContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-4 shadow-2xl transform translate-y-full transition-transform duration-300">
+        <div class="w-12 h-1 bg-slate-200 rounded-full mx-auto"></div>
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h3 class="text-xs font-bold text-slate-900">İşbirliği Şartını Güncelle</h3>
+            <button onclick="closeEditTermsModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">✕</button>
+        </div>
+        <form id="editTermsForm" action="" method="POST" class="space-y-3 text-xs">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1.5">Teklif Edilen Komisyon Oranı</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" onclick="setModalRate('%25')" class="term-btn p-2.5 rounded-xl border border-slate-200 font-bold text-slate-700 hover:theme-border-primary transition">%25</button>
+                    <button type="button" onclick="setModalRate('%50')" class="term-btn p-2.5 rounded-xl border border-slate-200 font-bold text-slate-700 hover:theme-border-primary transition">%50</button>
+                    <button type="button" onclick="setModalRate('Özel Teklif')" class="term-btn p-2.5 rounded-xl border border-slate-200 font-bold text-slate-700 hover:theme-border-primary transition">Özel</button>
+                </div>
+                <input type="text" name="isbirligi_kosulu" id="modalRateInput" required class="w-full mt-2.5 px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none">
+            </div>
+            <div class="pt-2">
+                <button type="submit" class="w-full py-2.5 theme-bg-primary theme-hover-bg text-white font-bold rounded-xl transition shadow-xs">
+                    Şartı Güncelle & Gönder
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 1. Proje Tescilleri için Long-Press & Action Sheet Mantığı
+    let regTimer = null;
+    let isRegLongPress = false;
+
+    document.querySelectorAll('[data-reg-card]').forEach(card => {
+        const regId = card.getAttribute('data-reg-id');
+        const projectId = card.getAttribute('data-project-id');
+        const clientName = card.getAttribute('data-client-name');
+        const projectName = card.getAttribute('data-project-name');
+        const canCancel = card.getAttribute('data-can-cancel') === 'true';
+
+        // Mobilde Dokunma
+        card.addEventListener('touchstart', () => {
+            isRegLongPress = false;
+            regTimer = setTimeout(() => {
+                isRegLongPress = true;
+                card.classList.add('scale-95', 'ring-2', 'theme-border-primary');
+                if (navigator.vibrate) navigator.vibrate(50);
+                openRegActionSheet(regId, projectId, clientName, projectName, canCancel);
+            }, 450);
+        }, { passive: true });
+
+        card.addEventListener('touchend', () => {
+            clearTimeout(regTimer);
+            card.classList.remove('scale-95', 'ring-2', 'theme-border-primary');
+            if (!isRegLongPress) {
+                // Kısa dokunmada da doğrudan detay açılabilir
+                window.location.href = `/projects/detail/${projectId}`;
+            }
+        });
+
+        card.addEventListener('touchmove', () => {
+            clearTimeout(regTimer);
+            card.classList.remove('scale-95', 'ring-2', 'theme-border-primary');
+        });
+
+        // Masaüstünde Tıklama & Basılı Tutma
+        card.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            isRegLongPress = false;
+            regTimer = setTimeout(() => {
+                isRegLongPress = true;
+                openRegActionSheet(regId, projectId, clientName, projectName, canCancel);
+            }, 450);
+        });
+
+        card.addEventListener('mouseup', (e) => {
+            if (e.button !== 0) return;
+            clearTimeout(regTimer);
+            if (!isRegLongPress) {
+                window.location.href = `/projects/detail/${projectId}`;
+            }
+        });
+
+        card.addEventListener('mouseleave', () => clearTimeout(regTimer));
+    });
+
+    function openRegActionSheet(regId, projectId, clientName, projectName, canCancel) {
+        document.getElementById('sheetClientName').innerText = clientName;
+        document.getElementById('sheetProjectName').innerText = projectName;
+        document.getElementById('sheetViewProjectBtn').href = `/projects/detail/${projectId}`;
+        
+        const cancelForm = document.getElementById('sheetCancelForm');
+        cancelForm.action = `/projects/cancel-registration/${regId}`;
+
+        const cancelBtn = document.getElementById('sheetCancelBtn');
+        if (canCancel) {
+            cancelForm.classList.remove('hidden');
+        } else {
+            cancelForm.classList.add('hidden');
+        }
+
+        const sheet = document.getElementById('regActionSheet');
+        const content = document.getElementById('regActionContent');
+        sheet.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeRegActionSheet() {
+        const sheet = document.getElementById('regActionSheet');
+        const content = document.getElementById('regActionContent');
+        sheet.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    // 2. Şart Düzenleme Modal Fonksiyonları
+    function openEditTermsModalFromButton(btn) {
+        const collabId = btn.getAttribute('data-collab-id');
+        const currentTerms = btn.getAttribute('data-terms') || '%50';
+        const form = document.getElementById('editTermsForm');
+        form.action = `/collaborations/update-terms/${collabId}`;
+        document.getElementById('modalRateInput').value = currentTerms;
+        const modal = document.getElementById('editTermsModal');
+        const content = document.getElementById('editTermsContent');
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-y-full');
+    }
+
+    function closeEditTermsModal() {
+        const modal = document.getElementById('editTermsModal');
+        const content = document.getElementById('editTermsContent');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-y-full');
+    }
+
+    function setModalRate(val) {
+        document.getElementById('modalRateInput').value = val;
+    }
+</script>
+{% endblock %}

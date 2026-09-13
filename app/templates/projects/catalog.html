@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Proje Satış Ağı - EMLAKMATCH{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto space-y-4 pb-16">
+    <!-- Üst Başlık & Tescillerim Butonu -->
+    <div class="flex items-center justify-between pt-2">
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/dashboard';}" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-200 transition">
+                ‹
+            </button>
+            <div>
+                <h1 class="text-base font-extrabold text-slate-900 tracking-tight">Proje Satış Ağı</h1>
+                <p class="text-[11px] text-slate-500 font-semibold">Müteahhit projelerinde doğrudan komisyon ortaklığı</p>
+            </div>
+        </div>
+        <a href="/projects/my-registrations" class="text-[10px] font-black theme-text-dark theme-bg-light border theme-border-light hover:opacity-90 px-3 py-1.5 rounded-xl transition shadow-2xs">
+            Tescillerim ›
+        </a>
+    </div>
+
+    <!-- İlçe Filtreleme Formu -->
+    <form action="/projects" method="GET" class="flex gap-2">
+        <input type="text" name="ilce" value="{{ selected_ilce }}" placeholder="İlçeye göre ara (Örn: Beykoz, Sarıyer)" 
+               class="flex-1 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:theme-border-primary shadow-2xs">
+        <button type="submit" class="theme-bg-primary theme-hover-bg text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition shadow-2xs active:scale-95">
+            Ara
+        </button>
+    </form>
+
+    <!-- Proje Listesi -->
+    <div class="space-y-3">
+        {% if projects and projects|length > 0 %}
+            {% for p in projects %}
+            <div class="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-2xs hover:shadow-md transition">
+                <!-- Tıklanabilir Kapak Görseli -->
+                <a href="/projects/detail/{{ p.id }}" class="block h-36 bg-slate-100 relative group overflow-hidden">
+                    <img src="{{ p.kapak_fotografi or 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80' }}" 
+                         alt="{{ p.ad }}" 
+                         class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                    <span class="absolute top-2 left-2 theme-bg-primary text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-sm">
+                        %{{ p.partner_komisyon_orani }} Net Komisyon
+                    </span>
+                    <span class="absolute top-2 right-2 bg-white/95 text-slate-800 text-[10px] font-extrabold px-2 py-0.5 rounded-lg shadow-sm">
+                        {{ p.proje_tipi }}
+                    </span>
+                </a>
+
+                <div class="p-4 space-y-2.5">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <!-- Tıklanabilir Başlık -->
+                            <a href="/projects/detail/{{ p.id }}" class="text-sm font-extrabold text-slate-900 hover:theme-text-primary transition block">
+                                {{ p.ad }}
+                            </a>
+                            <span class="text-[11px] font-bold text-slate-500">📍 {{ p.ilce }}, {{ p.il }}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-400 block font-semibold">Fiyat Aralığı</span>
+                            <span class="text-xs font-extrabold text-slate-900 block">
+                                {{ '{:,}'.format(p.min_fiyat).replace(',', '.') }} - {{ '{:,}'.format(p.max_fiyat).replace(',', '.') }} TL
+                            </span>
+                        </div>
+                    </div>
+
+                    <p class="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                        {{ p.aciklama.split('[DAIRE_TIPLERI]:')[0].strip() if p.aciklama else 'Proje detayları, teslim tarihi ve daire planları için inceleyebilirsiniz.' }}
+                    </p>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-400">
+                            Geliştirici: {{ p.users.sirket_unvani if p.users and p.users.sirket_unvani else 'Proje Firması' }}
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <a href="/projects/detail/{{ p.id }}" 
+                               class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs px-3 py-1.5 rounded-xl transition">
+                                Detay ›
+                            </a>
+                            <a href="/projects/{{ p.id }}/register-client" 
+                               class="theme-bg-primary theme-hover-bg text-white font-extrabold text-xs px-3.5 py-1.5 rounded-xl transition shadow-2xs active:scale-95">
+                                Müşteri Tescil Et ›
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="bg-white rounded-3xl border border-slate-200 p-8 text-center text-xs text-slate-400">
+                Arama kriterlerinize uygun aktif proje bulunamadı.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

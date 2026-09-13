@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}İşbirliği Talebi Gönder - Emlak Network{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-xl font-bold text-slate-900">🤝 İşbirliği Talebi Başlat</h2>
+            <p class="text-xs text-slate-500 mt-1">İlgili portföy veya talep sahibi meslektaşınıza resmi teklifinizi iletin.</p>
+        </div>
+        <a href="/dashboard" class="text-xs font-semibold text-slate-500 hover:text-slate-800">← Panele Dön</a>
+    </div>
+
+    {% if message %}
+    <div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <form action="/collaborations/send" method="POST" class="space-y-4">
+        <input type="hidden" name="ilgili_ilan_id" value="{{ item_id }}">
+        <input type="hidden" name="talep_tipi" value="{{ talep_tipi }}">
+        <input type="hidden" name="target_owner_id" value="{{ target_owner_id }}">
+
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-1">
+            <div><strong>İşlem Tipi:</strong> {{ talep_tipi }}</div>
+            <div><strong>İlan Referansı:</strong> {{ item_id }}</div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Teklif Edilen İşbirliği Koşulu</label>
+            <select name="isbirligi_kosulu" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                <option value="%50 - %50 Eşit Komisyon Paylaşımı">%50 - %50 Eşit Komisyon Paylaşımı</option>
+                <option value="%30 Devir / Yönlendirme Primi">%30 Devir / Yönlendirme Primi</option>
+                <option value="%25 Müşteri Paslama Payı">%25 Müşteri Paslama Payı</option>
+                <option value="Özel Şartlar Çerçevesinde Görüşme">Özel Şartlar Çerçevesinde Görüşme</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Meslektaşınıza Not / Kısa Açıklama</label>
+            <textarea name="notlar" rows="3" placeholder="Örn: Ciddi alıcım mevcut, yer gösterme için randevu rica ediyorum..." class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg text-sm transition mt-4">
+            Teklifi İlet
+        </button>
+    </form>
+</div>
+{% endblock %}

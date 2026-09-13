@@ -1,0 +1,110 @@
+{% extends "company/layout.html" %}
+
+{% block title %}Performans & Satış Raporları - Proje Yönetim Konsolu{% endblock %}
+{% block header_title %}Performans & Satış Raporları{% endblock %}
+
+{% block content %}
+<div class="space-y-6 pb-16">
+
+    <!-- KPI Kartları (4'lü Grid) -->
+    <div class="grid grid-cols-4 gap-4">
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-1">
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">YÖNLENDİRİLEN TOPLAM LEAD</span>
+            <span class="text-2xl font-black text-slate-900 block mt-1">{{ total_leads }}</span>
+            <span class="text-[11px] text-slate-400 font-bold block mt-0.5">Tüm projeleriniz</span>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-1">
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">GERÇEKLEŞEN SATIŞ</span>
+            <span class="text-2xl font-black theme-text-primary block mt-1">{{ total_sales }} Ünite</span>
+            <span class="text-[11px] text-slate-400 font-bold block mt-0.5">Tapu devri / Kapanan</span>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-1">
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">SATIŞ DÖNÜŞÜM ORANI</span>
+            <span class="text-2xl font-black text-blue-600 block mt-1">%{{ conversion_rate }}</span>
+            <span class="text-[11px] text-slate-400 font-bold block mt-0.5">Lead → Satış Başarısı</span>
+        </div>
+
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-1">
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">TOPLAM SATIŞ CİROSU</span>
+            <span class="text-2xl font-black text-slate-900 block mt-1">{{ '{:,}'.format(total_revenue).replace(',', '.') }} TL</span>
+            <span class="text-[11px] text-slate-400 font-bold block mt-0.5">Hakediş: {{ '{:,}'.format(total_commission).replace(',', '.') }} TL</span>
+        </div>
+    </div>
+
+    <!-- 2 Kolonlu Analitik Alanı -->
+    <div class="grid grid-cols-3 gap-6 items-start">
+        
+        <!-- Proje Bazlı Dağılım Tablosu (2 Kolon) -->
+        <div class="col-span-2 bg-white rounded-3xl border border-slate-200/90 p-6 shadow-2xs space-y-4">
+            <div>
+                <h3 class="text-sm font-black text-slate-900 tracking-tight">Proje Bazında Satış & Stok Performansı</h3>
+                <p class="text-xs text-slate-400 font-medium">Yayındaki portföyünüzün dönüşüm istatistikleri</p>
+            </div>
+
+            {% if project_breakdown and project_breakdown|length > 0 %}
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="text-[10px] font-black text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
+                            <th class="py-3 px-3">PROJE ADI</th>
+                            <th class="py-3 px-3 text-center">GELEN LEAD</th>
+                            <th class="py-3 px-3 text-center">KAPANAN SATIŞ</th>
+                            <th class="py-3 px-3 text-center">KALAN STOK</th>
+                            <th class="py-3 px-3 text-right">PROJE CİROSU</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-bold text-slate-700 divide-y divide-slate-100">
+                        {% for pb in project_breakdown %}
+                        <tr class="hover:bg-slate-50/80 transition">
+                            <td class="py-3.5 px-3 font-extrabold text-slate-900">{{ pb.ad }}</td>
+                            <td class="py-3.5 px-3 text-center text-slate-600">{{ pb.leads }}</td>
+                            <td class="py-3.5 px-3 text-center theme-text-primary font-black">{{ pb.sales }}</td>
+                            <td class="py-3.5 px-3 text-center text-slate-600">{{ pb.stok }}</td>
+                            <td class="py-3.5 px-3 text-right font-black text-slate-900">{{ '{:,}'.format(pb.revenue).replace(',', '.') }} TL</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="py-8 text-center text-xs text-slate-400">Raporlanacak proje verisi bulunamadı.</div>
+            {% endif %}
+        </div>
+
+        <!-- En Başarılı 5 Broker Kartı (1 Kolon) -->
+        <div class="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-2xs space-y-4">
+            <div>
+                <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">EN BAŞARILI 5 BROKER</h3>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">En çok satış ve lead üreten partnerler</p>
+            </div>
+
+            <div class="space-y-2">
+                {% if top_agents and top_agents|length > 0 %}
+                    {% for ag in top_agents %}
+                    <div class="p-3.5 bg-slate-50 hover:theme-bg-light rounded-2xl border border-slate-100 transition flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-lg theme-bg-light theme-text-dark font-black text-xs flex items-center justify-center border theme-border-light">
+                                {{ loop.index }}
+                            </span>
+                            <div>
+                                <h4 class="text-xs font-black text-slate-900">{{ ag.name }}</h4>
+                                <span class="text-[10px] text-slate-400 font-bold block">{{ ag.leads }} Tescilli Alıcı</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 theme-bg-light theme-text-dark border theme-border-light text-[11px] font-black rounded-xl">
+                            {{ ag.sales }} Satış
+                        </span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="py-8 text-center text-xs text-slate-400">Henüz satış kapatmış partner bulunmuyor.</div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
