@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Form, Response, Cookie
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from app.database import supabase
@@ -51,49 +51,117 @@ def post_admin_login(
 
 # ================= 2. ADMIN ANA KONSOLU =================
 @router.get("/dashboard", response_class=HTMLResponse)
-def get_admin_dashboard(request: Request, tab: str = "onaylar", user_id: str = Cookie(None)):
+def get_admin_dashboard(request: Request, tab: str = "onaylar", member_type: str = "agent", user_id: str = Cookie(None)):
     if not user_id or not is_admin(user_id):
         return RedirectResponse(url="/admin/login", status_code=303)
 
     try:
-        # 1. Onay Bekleyen Emlakçılar
+        # 1. Onay Bekleyenler (Emlakçılar ve Firmalar)
         p_res = supabase.table("users").select("*").eq("durum", "onay_bekliyor").order("created_at", desc=True).execute()
         pending_users = p_res.data or []
 
-        # 2. Tüm Üyeler
+        # 2. Tüm Üyeler (Admin hariç)
         u_res = supabase.table("users").select("*").neq("rol", "admin").order("created_at", desc=True).execute()
-        all_users = u_res.data or []
+        all_raw_users = u_res.data or []
 
-        # 3. Tüm Portföyler
-        port_res = supabase.table("portfolios").select("*, users:porfoy_sahibi_id(ad_soyad, eposta, telefon)").order("created_at", desc=True).execute()
-        all_portfolios = port_res.data or []
+        # Emlakçılar ve Firmalar ayrımı
+        agents = []
+        companies = []
+        for u in all_raw_users:
+            ft = str(u.get("firma_tipi") or "").lower()
+            if ft in ["sirket", "proje_firmasi", "developer"]:
+                companies.append(u)
+            else:
+                agents.append(u)
 
-        # 4. Destek & Şikayet Talepleri
-        tick_res = supabase.table("support_tickets").select("*, sender:user_id(ad_soyad, eposta, telefon, sirket_unvani)").order("created_at", desc=True).execute()
+        # 3. Destek Talepleri
+        tick_res = supabase.table("support_tickets").select("*, sender:user_id(ad_soyad, eposta, telefon, sirket_unvani, firma_tipi)").order("created_at", desc=True).execute()
         tickets = tick_res.data or []
-
-        # 5. Onay Bekleyen Gruplar
-        g_res = supabase.table("groups").select("*, kurucu:kurucu_id(ad_soyad, eposta, telefon, sirket_unvani)").eq("durum", "onay_bekliyor").order("created_at", desc=True).execute()
-        pending_groups = g_res.data or []
 
     except Exception as e:
         print(f"[ADMIN VERİ GETİRME HATASI]: {e}")
-        pending_users, all_users, all_portfolios, tickets, pending_groups = [], [], [], [], []
+        pending_users, agents, companies, tickets = [], [], [], []
 
     return templates.TemplateResponse(
         request=request,
         name="admin/dashboard.html",
         context={
             "tab": tab,
+            "member_type": member_type,
             "pending_users": pending_users,
-            "all_users": all_users,
-            "all_portfolios": all_portfolios,
-            "tickets": tickets,
-            "pending_groups": pending_groups
+            "agents": agents,
+            "companies": companies,
+            "tickets": tickets
         }
     )
 
-# ================= 3. ÜYELİK ONAY & RED =================
+# ================= 3. TEK BİR ÜYENİN TÜM DETAYLARINI GETİREN API =================
+@router.get("/api/user-detail/{target_id}")
+def api_get_user_detail(target_id: str, user_id: str = Cookie(None)):
+    if not user_id or not is_admin(user_id):
+        return JSONResponse({"error": "Yetkisiz işlem"}, status_code=403)
+
+    clean_target_id = str(target_id).strip()
+
+    try:
+        # Kullanıcı ana bilgisi
+        u_res = supabase.table("users").select("*").eq("id", clean_target_id).single().execute()
+        target_user = u_res.data
+        if not target_user:
+            return JSONResponse({"error": "Kullanıcı bulunamadı"}, status_code=404)
+
+        is_company = str(target_user.get("firma_tipi") or "").lower() in ["sirket", "proje_firmasi", "developer"]
+        
+        detail_data = {
+            "user": target_user,
+            "is_company": is_company,
+            "invited_by": None,
+            "portfolios": [],
+            "collaborations": [],
+            "projects": [],
+            "project_sales": []
+        }
+
+        if not is_company:
+            # 1. Kim Davet Etti? (invitation_codes üzerinden arama)
+            try:
+                inv_res = supabase.table("invitation_codes").select("olusturan_id, users:olusturan_id(ad_soyad, eposta, telefon, sirket_unvani)").eq("kullanan_id", clean_target_id).execute()
+                if inv_res.data and len(inv_res.data) > 0 and inv_res.data[0].get("users"):
+                    detail_data["invited_by"] = inv_res.data[0]["users"]
+            except Exception:
+                detail_data["invited_by"] = None
+
+            # 2. Portföyleri
+            p_res = supabase.table("portfolios").select("*").eq("porfoy_sahibi_id", clean_target_id).order("created_at", desc=True).execute()
+            detail_data["portfolios"] = p_res.data or []
+
+            # 3. Yaptığı İşbirlikleri
+            c_res = supabase.table("collaboration_requests").select(
+                "*, portfolios:ilgili_ilan_id(gayrimenkul_tipi, ilce, fiyat)"
+            ).or_(f"talep_gonderen_id.eq.{clean_target_id},talep_alan_id.eq.{clean_target_id}").order("created_at", desc=True).execute()
+            detail_data["collaborations"] = c_res.data or []
+
+        else:
+            # Şirket / Proje Firması ise:
+            # 1. Projeleri
+            prj_res = supabase.table("projects").select("*").eq("firma_id", clean_target_id).order("created_at", desc=True).execute()
+            all_projects = prj_res.data or []
+            detail_data["projects"] = all_projects
+
+            # 2. Hangi emlakçıyla hangi tescil/satışı yapmış?
+            p_ids = [p["id"] for p in all_projects]
+            if p_ids:
+                reg_res = supabase.table("project_customer_registrations").select(
+                    "*, projects(ad, partner_komisyon_orani), users:agent_id(ad_soyad, telefon, eposta, sirket_unvani)"
+                ).in_("project_id", p_ids).order("created_at", desc=True).execute()
+                detail_data["project_sales"] = reg_res.data or []
+
+        return JSONResponse({"success": True, "data": detail_data})
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# ================= 4. ÜYELİK ONAY & RED =================
 @router.post("/users/approve/{target_id}")
 def post_approve_user(target_id: str, user_id: str = Cookie(None)):
     if not user_id or not is_admin(user_id):
@@ -116,7 +184,7 @@ def post_reject_user(target_id: str, user_id: str = Cookie(None)):
         print(f"[RED HATA]: {e}")
     return RedirectResponse(url="/admin/dashboard?tab=onaylar", status_code=303)
 
-# ================= 4. DESTEK / BİLDİRİM BİLETİNİ GÜNCELLE =================
+# ================= 5. DESTEK BİLETİNİ GÜNCELLE =================
 @router.post("/tickets/update-status/{ticket_id}")
 def post_update_ticket_status(ticket_id: str, durum: str = Form(...), user_id: str = Cookie(None)):
     if not user_id or not is_admin(user_id):
@@ -132,7 +200,7 @@ def post_update_ticket_status(ticket_id: str, durum: str = Form(...), user_id: s
             send_notification(
                 user_id=target_user_id,
                 baslik=f"Destek Talebiniz Güncellendi ({durum.upper()})",
-                icerik=f"'{konu}' başlıklı destek talebinizin durumu: {durum}.",
+                icerik=f"'{konu}' başlıklı talebinizin yeni durumu: {durum}.",
                 hedef_url="/settings"
             )
     except Exception as e:
@@ -140,7 +208,7 @@ def post_update_ticket_status(ticket_id: str, durum: str = Form(...), user_id: s
 
     return RedirectResponse(url="/admin/dashboard?tab=destek", status_code=303)
 
-# ================= 5. ÜYE DURAKLATMA =================
+# ================= 6. ÜYE DURAKLATMA (ASKIYA ALMA) =================
 @router.post("/users/toggle-pause/{target_id}")
 def post_pause_user(
     target_id: str,
@@ -165,7 +233,7 @@ def post_pause_user(
 
     return RedirectResponse(url="/admin/dashboard?tab=uyeler", status_code=303)
 
-# ================= 6. ÜYE KESİN SİLME =================
+# ================= 7. ÜYE KESİN SİLME =================
 @router.post("/users/hard-delete/{target_id}")
 def post_delete_user(
     target_id: str,
@@ -185,55 +253,3 @@ def post_delete_user(
         print(f"[ÜYE SİLME HATA]: {e}")
 
     return RedirectResponse(url="/admin/dashboard?tab=uyeler", status_code=303)
-
-# ================= 7. GRUP ONAY & RED =================
-@router.post("/groups/approve/{group_id}")
-def post_approve_group(group_id: str, user_id: str = Cookie(None)):
-    if not user_id or not is_admin(user_id):
-        return RedirectResponse(url="/admin/login", status_code=303)
-
-    try:
-        # 1. Grubu aktif yap
-        g_res = supabase.table("groups").select("kurucu_id, ad").eq("id", group_id).single().execute()
-        supabase.table("groups").update({"durum": "aktif"}).eq("id", group_id).execute()
-
-        # 2. Kurucuyu gruba 'admin' rolüyle üye yap
-        if g_res.data and g_res.data.get("kurucu_id"):
-            kurucu_id = g_res.data.get("kurucu_id")
-            supabase.table("group_members").upsert({
-                "group_id": group_id,
-                "user_id": kurucu_id,
-                "rol": "admin"
-            }).execute()
-
-            send_notification(
-                user_id=kurucu_id,
-                baslik="Grup Başvurunuz Onaylandı! 🎉",
-                icerik=f"'{g_res.data.get('ad')}' adlı grup onaylandı ve yayına alındı. Artık yönetebilirsiniz.",
-                hedef_url=f"/network/groups/{group_id}"
-            )
-    except Exception as e:
-        print(f"[GRUP ONAY HATASI]: {e}")
-
-    return RedirectResponse(url="/admin/dashboard?tab=grup_onaylari", status_code=303)
-
-@router.post("/groups/reject/{group_id}")
-def post_reject_group(group_id: str, user_id: str = Cookie(None)):
-    if not user_id or not is_admin(user_id):
-        return RedirectResponse(url="/admin/login", status_code=303)
-
-    try:
-        g_res = supabase.table("groups").select("kurucu_id, ad").eq("id", group_id).single().execute()
-        supabase.table("groups").update({"durum": "reddedildi"}).eq("id", group_id).execute()
-
-        if g_res.data and g_res.data.get("kurucu_id"):
-            send_notification(
-                user_id=g_res.data.get("kurucu_id"),
-                baslik="Grup Başvurunuz Reddedildi",
-                icerik=f"'{g_res.data.get('ad')}' adlı grup başvurunuz platform kuralları gereği onaylanmadı.",
-                hedef_url="/network?tab=gruplar"
-            )
-    except Exception as e:
-        print(f"[GRUP RET HATASI]: {e}")
-
-    return RedirectResponse(url="/admin/dashboard?tab=grup_onaylari", status_code=303)

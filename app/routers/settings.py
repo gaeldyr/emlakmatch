@@ -160,31 +160,41 @@ def post_send_support(
 
     clean_user_id = str(user_id).strip()
     msg_clean = mesaj.strip()
+    konu_clean = konu.strip()
 
-    if not msg_clean:
+    if not msg_clean or not konu_clean:
         return RedirectResponse(url="/settings?err=empty_support", status_code=303)
 
     try:
-        supabase.table("support_tickets").insert({
+        # 1. support_tickets tablosuna kayıt
+        ticket_payload = {
             "user_id": clean_user_id,
-            "konu": konu.strip(),
+            "konu": konu_clean,
             "mesaj": msg_clean,
             "durum": "beklemede"
-        }).execute()
+        }
+        res = supabase.table("support_tickets").insert(ticket_payload).execute()
+        print(f"[DESTEK TALEBİ BAŞARIYLA OLUŞTURULDU]: {res.data}")
 
-        admins = supabase.table("users").select("id").eq("rol", "admin").execute()
-        for adm in (admins.data or []):
-            send_notification(
-                user_id=adm["id"],
-                baslik="Yeni Destek / Şikayet Bildirimi 📩",
-                icerik=f"{konu.strip()}: {msg_clean[:40]}...",
-                hedef_url="/admin/dashboard?tab=destek"
-            )
+        # 2. Sistem yöneticilerine bildirim (Hata verirse destek kaydını bozmasın)
+        try:
+            admins = supabase.table("users").select("id").eq("rol", "admin").execute()
+            for adm in (admins.data or []):
+                send_notification(
+                    user_id=adm["id"],
+                    baslik="Yeni Destek / Şikayet Talebi 📩",
+                    icerik=f"{konu_clean}: {msg_clean[:35]}...",
+                    hedef_url="/admin/dashboard?tab=destek"
+                )
+        except Exception as notif_err:
+            print(f"[DESTEK BİLDİRİM GÖNDERME UYARISI]: {notif_err}")
+
     except Exception as e:
-        print(f"[DESTEK TALEBİ OLUŞTURMA HATASI]: {e}")
-        return RedirectResponse(url="/settings?err=support_failed", status_code=303)
+        print(f"\n[!!! DESTEK TALEBİ KRİTİK HATASI !!!]: {e}\n")
+        err_msg = str(e).replace(" ", "_")[:60]
+        return RedirectResponse(url=f"/settings?err={err_msg}", status_code=303)
 
-    return RedirectResponse(url="/settings?msg=support_sent", status_code=303)
+    return RedirectResponse(url="/settings?msg=ticket_sent", status_code=303)
 
 # ================= 6. HESABI DONDUR (ASKIYA AL) =================
 @router.post("/freeze-account")

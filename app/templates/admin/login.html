@@ -1,49 +1,67 @@
 {% extends "base.html" %}
 
-{% block title %}Yönetici Girişi - EMLAKMATCH{% endblock %}
+{% block title %}Yönetici Konsolu Girişi | EMLAKMATCH{% endblock %}
 
 {% block bottom_nav %}{% endblock %}
 
 {% block content %}
-<div class="flex flex-col justify-between min-h-[85vh] py-4 max-w-md mx-auto">
-    <!-- Üst Başlık -->
-    <div class="flex flex-col items-center text-center mt-6">
-        <div class="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center border border-slate-800 shadow-md mb-3">
-            <span class="text-2xl">🛡️</span>
-        </div>
-        <h1 class="text-xl font-black text-slate-900 tracking-tight">Yönetim Konsolu</h1>
-        <p class="text-xs text-slate-500 mt-1">Platform Admin Yetkili Girişi</p>
-    </div>
+<style>
+    main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+</style>
 
-    <!-- Form -->
-    <div class="space-y-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+<div class="min-h-screen w-full flex items-center justify-center bg-[#0A0F11] text-slate-100 font-sans p-4 selection:bg-emerald-500 selection:text-white relative overflow-hidden">
+
+    <!-- Arka Plan Işık Efektleri -->
+    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="w-full max-w-md bg-[#121A1D] border border-white/[0.08] rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative z-10">
+        
+        <!-- Üst Logo & Başlık -->
+        <div class="flex flex-col items-center text-center space-y-2">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-700 flex items-center justify-center text-white shadow-xl shadow-emerald-950/60 border border-emerald-300/30">
+                <svg class="w-7 h-7 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+            </div>
+            <h1 class="text-xl font-black text-white tracking-tight">Yönetim Konsolu</h1>
+            <p class="text-xs text-slate-400 font-medium">EMLAKMATCH Sistem ve Ağ Yöneticisi Girişi</p>
+        </div>
+
         {% if error %}
-        <div class="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl text-center">
+        <div class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold rounded-xl text-center">
             {{ error }}
         </div>
         {% endif %}
 
-        <form action="/admin/login" method="POST" class="space-y-3">
+        <!-- Giriş Formu -->
+        <form action="/admin/login" method="POST" class="space-y-4">
             <div>
-                <label class="block text-[11px] font-bold text-slate-600 mb-1">Yönetici E-Posta</label>
-                <input type="email" name="eposta" required placeholder="admin@emlakmatch.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:bg-white focus:outline-none transition">
+                <label class="block text-xs font-bold text-slate-300 mb-1.5">Yönetici E-Postası</label>
+                <input type="email" name="eposta" required placeholder="admin@emlakmatch.com" 
+                       class="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent focus:bg-white/[0.07] focus:outline-none transition">
             </div>
 
             <div>
-                <label class="block text-[11px] font-bold text-slate-600 mb-1">Yönetici Şifresi</label>
-                <input type="password" name="sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:bg-white focus:outline-none transition">
+                <label class="block text-xs font-bold text-slate-300 mb-1.5">Yönetici Şifresi</label>
+                <input type="password" name="sifre" required placeholder="••••••••" 
+                       class="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent focus:bg-white/[0.07] focus:outline-none transition">
             </div>
 
-            <button type="submit" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-3 rounded-xl text-sm transition shadow-sm active:scale-[0.99] mt-2">
+            <button type="submit" 
+                    class="w-full mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black py-3.5 rounded-xl text-xs sm:text-sm tracking-wide transition shadow-lg shadow-emerald-950/60 active:scale-[0.99] cursor-pointer">
                 Konsola Giriş Yap
             </button>
         </form>
-    </div>
 
-    <div class="text-center pt-2">
-        <a href="/login" class="text-xs font-semibold text-slate-400 hover:text-slate-700">
-            ← Emlakçı Girişine Dön
-        </a>
+        <div class="text-center pt-2 border-t border-white/[0.06]">
+            <a href="/login" class="text-xs font-semibold text-slate-400 hover:text-emerald-400 transition">
+                ← Emlakçı & Firma Girişine Dön
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -1,94 +1,154 @@
 {% extends "base.html" %}
 
-{% block title %}Giriş Yap - EMLAKMATCH{% endblock %}
+{% block title %}EMLAKMATCH | Gayrimenkul Profesyonelleri & Proje Satış Ağı{% endblock %}
 
 {% block bottom_nav %}{% endblock %}
 
 {% block content %}
-<div class="flex flex-col justify-between min-h-[85vh] py-2 max-w-md mx-auto">
-    <!-- 1. Logo ve Başlık -->
-    <div class="flex flex-col items-center text-center mt-2">
-        <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-200 shadow-sm mb-2.5">
-            <svg class="w-7 h-7 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
-        </div>
-        <h1 class="text-xl font-black tracking-tight text-slate-900">EMLAKMATCH</h1>
-        <p class="text-[11px] text-slate-500 font-semibold mt-0.5">Gayrimenkul Profesyonelleri & Proje Satış Ağı</p>
-    </div>
+<style>
+    /* base.html içindeki max-w-md kısıtını kırarak tam ekran yapıyoruz */
+    main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+</style>
 
-    <!-- 2. İKİ BUTON: EMLAKÇI GİRİŞİ & ŞİRKET GİRİŞİ (YEŞİL, KABARTMALI, NEGATİF-POZİTİF GEÇİŞLİ) -->
-    <div class="my-4 space-y-2">
-        <div class="grid grid-cols-2 gap-2.5 p-1.5 bg-emerald-100/60 rounded-2xl border border-emerald-200">
-            <button type="button" 
-                    id="btnTabAgent" 
-                    onclick="switchLoginRole('agent')" 
-                    class="py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 shadow-sm border border-emerald-600 bg-emerald-600 text-white hover:bg-white hover:text-emerald-800">
-                Emlakçı Girişi
-            </button>
+<div class="min-h-screen w-full flex flex-col lg:flex-row bg-[#0B1315] text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
 
-            <button type="button" 
-                    id="btnTabCompany" 
-                    onclick="switchLoginRole('company')" 
-                    class="py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-600 hover:text-white">
-                Şirket Girişi
-            </button>
+    <!-- ================= SOL / ÜST PANEL (MOBİLDE ŞIK HEADER, DESKTOPTA SOL VİTRİN) ================= -->
+    <div class="relative lg:w-[55%] xl:w-[58%] flex flex-col justify-between p-6 sm:p-10 lg:p-16 overflow-hidden min-h-[220px] sm:min-h-[280px] lg:min-h-screen shrink-0">
+        
+        <!-- Arka Plan Görseli & Gradyan Filtreleri -->
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85" 
+                 alt="Luxury Architecture" 
+                 class="w-full h-full object-cover scale-105 filter brightness-[0.32] contrast-125">
+            <div class="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-tr from-[#051311] via-[#0a1f1d]/85 to-[#0b1315]/70"></div>
         </div>
 
-        <p id="roleNoticeText" class="text-[10px] text-center text-emerald-900 font-bold">
-            Bağımsız broker ve gayrimenkul danışmanları paneli
-        </p>
-    </div>
-
-    <!-- 3. Form Alanı -->
-    <div class="space-y-3 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs">
-        {% if error %}
-        <div class="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl text-center">
-            {{ error }}
-        </div>
-        {% endif %}
-
-        <form action="/login" method="POST" class="space-y-3">
-            <input type="hidden" name="login_type" id="hiddenLoginType" value="{{ login_type or 'agent' }}">
-
+        <!-- Üst Logo (Hem Mobil Hem Masaüstü) -->
+        <div class="relative z-10 flex items-center gap-3">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-700 flex items-center justify-center shadow-lg shadow-emerald-950/60 border border-emerald-300/30 shrink-0">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+            </div>
             <div>
-                <label id="emailLabel" class="block text-[11px] font-bold text-slate-700 mb-1">E-Posta Adresi</label>
-                <input type="email" name="eposta" required placeholder="ornek@alanadi.com" 
-                       class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
+                <span class="text-lg sm:text-xl font-black tracking-wider text-white">EMLAKMATCH</span>
+                <span class="block text-[9px] sm:text-[10px] font-bold text-emerald-400 tracking-widest uppercase -mt-0.5">B2B Prime Network</span>
+            </div>
+        </div>
+
+        <!-- Orta Vitrin Başlıkları -->
+        <div class="relative z-10 my-auto py-6 sm:py-8 lg:py-0 max-w-xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] sm:text-xs font-bold mb-3 sm:mb-4 backdrop-blur-md">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Kapalı Devre Gayrimenkul İşbirliği Ağı
             </div>
 
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">Şifre</label>
-                <input type="password" name="sifre" required placeholder="••••••••" 
-                       class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none transition">
-            </div>
+            <h2 class="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.2]">
+                Emlakçının İş Ağı. <br/>
+                <span class="bg-gradient-to-r from-emerald-300 via-teal-200 to-emerald-400 bg-clip-text text-transparent">
+                    Projelerin Satış Ağı.
+                </span>
+            </h2>
 
-            <!-- Giriş Butonu (Negatif-Pozitif Hover) -->
-            <button type="submit" 
-                    class="w-full mt-2 bg-emerald-600 hover:bg-white text-white hover:text-emerald-700 border-2 border-emerald-600 font-black py-3 rounded-xl text-xs transition-all duration-200 shadow-sm active:scale-[0.99]">
-                Sisteme Giriş Yap
-            </button>
-        </form>
+            <p class="hidden sm:block mt-3 lg:mt-4 text-xs sm:text-sm lg:text-base text-slate-300/90 font-medium leading-relaxed">
+                Portföyünüzü güvenle paylaşın, doğru meslektaşınızla eşleşin. Prestijli projelerin tek B2B platformunda komisyonsuz ortak satış yapın.
+            </p>
+        </div>
 
-        <div class="pt-2 border-t border-slate-100">
-            <a id="registerLink" href="/register?type=agent" 
-               class="block w-full text-center bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-200 font-extrabold py-2.5 rounded-xl text-xs transition-all duration-200">
-                Yeni Hesap Başvurusu Yap
-            </a>
+        <!-- Masaüstü Alt Bilgi -->
+        <div class="relative z-10 hidden lg:flex items-center justify-between text-xs text-slate-400/80 pt-4 border-t border-white/5">
+            <span>© 2026 EMLAKMATCH</span>
+            <span class="flex items-center gap-1.5 text-emerald-400/90 font-medium">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Yetki Belgeli Güvenli Altyapı
+            </span>
         </div>
     </div>
 
-    <!-- Alt Bilgi & Admin -->
-    <div class="space-y-2 text-center pt-2">
-        <div>
-            <a href="/admin/login" class="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-700">
+    <!-- ================= SAĞ / ALT PANEL (SADE VE RAHAT GİRİŞ FORMU) ================= -->
+    <div class="lg:w-[45%] xl:w-[42%] bg-[#0F1719] flex-1 flex flex-col justify-between p-6 sm:p-10 lg:p-14 border-t lg:border-t-0 lg:border-l border-white/[0.08] relative rounded-t-3xl lg:rounded-none -mt-4 lg:mt-0 z-20 shadow-2xl lg:shadow-none">
+        
+        <div class="max-w-md w-full mx-auto">
+            <!-- Rol Değiştirici Butonlar -->
+            <div class="p-1.5 bg-white/[0.04] rounded-2xl border border-white/[0.08] grid grid-cols-2 gap-1.5">
+                <button type="button" 
+                        id="btnTabAgent" 
+                        onclick="switchLoginRole('agent')" 
+                        class="py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 bg-emerald-600 text-white shadow-md shadow-emerald-950/40">
+                    Emlakçı Girişi
+                </button>
+                <button type="button" 
+                        id="btnTabCompany" 
+                        onclick="switchLoginRole('company')" 
+                        class="py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 text-slate-400 hover:text-white hover:bg-white/[0.05]">
+                    Şirket Girişi
+                </button>
+            </div>
+
+            <!-- Başlık & Açıklama -->
+            <div class="mt-6 sm:mt-8 mb-5 sm:mb-6">
+                <h3 id="formTitle" class="text-xl sm:text-2xl font-black text-white tracking-tight">Danışman Portalı</h3>
+                <p id="roleNoticeText" class="text-xs text-slate-400 font-medium mt-1">
+                    Bağımsız brokerlar ve gayrimenkul danışmanları erişim noktası
+                </p>
+            </div>
+
+            {% if error %}
+            <div class="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold rounded-2xl flex items-center gap-2.5">
+                <svg class="w-4 h-4 shrink-0 stroke-rose-400" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Form -->
+            <form action="/login" method="POST" class="space-y-4">
+                <input type="hidden" name="login_type" id="hiddenLoginType" value="{{ login_type or 'agent' }}">
+
+                <div>
+                    <label id="emailLabel" class="block text-xs font-bold text-slate-300 mb-1.5">Danışman E-Posta Adresi</label>
+                    <input type="email" name="eposta" required placeholder="ornek@alanadi.com" 
+                           class="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent focus:bg-white/[0.07] focus:outline-none transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Giriş Şifresi</label>
+                    <input type="password" name="sifre" required placeholder="••••••••" 
+                           class="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent focus:bg-white/[0.07] focus:outline-none transition">
+                </div>
+
+                <button type="submit" 
+                        class="w-full mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black py-3.5 rounded-xl text-xs sm:text-sm tracking-wide transition shadow-lg shadow-emerald-950/60 active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer">
+                    <span>Sisteme Giriş Yap</span>
+                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </button>
+            </form>
+
+            <!-- Başvuru Alanı -->
+            <div class="mt-6 pt-5 border-t border-white/[0.08] text-center space-y-2.5">
+                <p class="text-xs text-slate-400">Henüz ağa dahil olmadınız mı?</p>
+                <a id="registerLink" href="/register?type=agent" 
+                   class="inline-block w-full py-3 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-emerald-400 hover:text-emerald-300 font-bold text-xs transition">
+                    Emlakçı Başvurusu Yap (Davetiye Gerekir)
+                </a>
+            </div>
+        </div>
+
+        <!-- Alt Not & Admin Girişi -->
+        <div class="pt-6 pb-2 text-center space-y-2 max-w-md w-full mx-auto">
+            <a href="/admin/login" class="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-slate-300 transition">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 <span>Yönetici / Admin Girişi</span>
             </a>
+            <p class="text-[10px] text-slate-600">
+                EMLAKMATCH Gayrimenkul B2B Teknolojileri
+            </p>
         </div>
-        <p class="text-[10px] text-slate-400">
-            EMLAKMATCH B2B İş Ortaklığı Altyapısı
-        </p>
+
     </div>
 </div>
 
@@ -99,24 +159,27 @@
         const hiddenInput = document.getElementById('hiddenLoginType');
         const notice = document.getElementById('roleNoticeText');
         const emailLabel = document.getElementById('emailLabel');
+        const formTitle = document.getElementById('formTitle');
         const regLink = document.getElementById('registerLink');
 
         hiddenInput.value = role;
 
         if (role === 'agent') {
-            btnAgent.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 shadow-sm border border-emerald-600 bg-emerald-600 text-white hover:bg-white hover:text-emerald-800';
-            btnCompany.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-600 hover:text-white';
-            notice.innerText = 'Bağımsız broker ve gayrimenkul danışmanları paneli';
+            btnAgent.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 bg-emerald-600 text-white shadow-md shadow-emerald-950/40';
+            btnCompany.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 text-slate-400 hover:text-white hover:bg-white/[0.05]';
+            formTitle.innerText = 'Danışman Portalı';
+            notice.innerText = 'Bağımsız brokerlar ve gayrimenkul danışmanları erişim noktası';
             emailLabel.innerText = 'Danışman E-Posta Adresi';
             regLink.href = '/register?type=agent';
-            regLink.innerText = 'Emlakçı Başvurusu Yap';
+            regLink.innerText = 'Emlakçı Başvurusu Yap (Davetiye Gerekir)';
         } else {
-            btnCompany.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 shadow-sm border border-emerald-600 bg-emerald-600 text-white hover:bg-white hover:text-emerald-800';
-            btnAgent.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-600 hover:text-white';
-            notice.innerText = 'İnşaat ve proje geliştirici firmaları yönetim konsolu';
+            btnCompany.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 bg-emerald-600 text-white shadow-md shadow-emerald-950/40';
+            btnAgent.className = 'py-2.5 px-3 rounded-xl text-xs font-black transition-all duration-200 text-slate-400 hover:text-white hover:bg-white/[0.05]';
+            formTitle.innerText = 'Proje Firması Portalı';
+            notice.innerText = 'İnşaat ve geliştirici firmaları proje yönetim konsolu';
             emailLabel.innerText = 'Şirket Yetkili E-Postası';
             regLink.href = '/register?type=company';
-            regLink.innerText = 'Proje Firması Başvurusu Yap';
+            regLink.innerText = 'Proje Geliştirici Başvurusu Yap';
         }
     }
 

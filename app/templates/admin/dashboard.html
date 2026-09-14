@@ -1,290 +1,399 @@
 {% extends "base.html" %}
 
-{% block title %}Yönetici Konsolu - EMLAKMATCH{% endblock %}
+{% block title %}Yönetici Konsolu | EMLAKMATCH Prime B2B{% endblock %}
+
+{% block bottom_nav %}{% endblock %}
 
 {% block content %}
-<div class="space-y-4 pb-12 max-w-md mx-auto">
-    <!-- Konsol Başlığı -->
-    <div class="flex items-center justify-between pt-2 pb-2 border-b border-slate-200">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
-                ADM
+<style>
+    /* base.html mobil kısıtlamasını kaldırıp tam ekran yapıyoruz */
+    main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+</style>
+
+<div class="min-h-screen bg-[#0A0F11] text-slate-100 font-sans selection:bg-emerald-500 selection:text-white pb-16">
+
+    <!-- ================= ÜST BAR (NAVBAR) ================= -->
+    <header class="sticky top-0 z-30 bg-[#0F1719]/90 backdrop-blur-md border-b border-white/[0.08] px-4 sm:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-700 flex items-center justify-center font-black text-xs text-white shadow-lg shadow-emerald-950/60 border border-emerald-300/30">
+                    ADM
+                </div>
+                <div>
+                    <h1 class="text-sm sm:text-base font-black text-white tracking-tight flex items-center gap-2">
+                        <span>Yönetici Konsolu</span>
+                        <span class="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Prime Admin</span>
+                    </h1>
+                    <p class="text-[10px] text-slate-400">EMLAKMATCH Ağ ve İşbirliği Denetim Masası</p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-sm font-black text-slate-900">Yönetici Konsolu</h1>
-                <p class="text-[10px] text-slate-400">Sistem Geneli Kontrol Paneli</p>
+
+            <div class="flex items-center gap-3">
+                <a href="/logout" class="px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span>Çıkış Yap</span>
+                </a>
             </div>
         </div>
-        <a href="/logout" class="text-xs text-rose-600 font-bold bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-xl transition">
-            Çıkış Yap
-        </a>
-    </div>
+    </header>
 
-    <!-- 5 Sekmeli Navigasyon (Onaylar, Gruplar, Üyeler, Portföyler, Destek) -->
-    <div class="grid grid-cols-5 gap-1 bg-slate-200/70 p-1 rounded-2xl text-[10px] font-bold text-center">
-        <a href="/admin/dashboard?tab=onaylar" class="py-2 flex flex-col items-center justify-center rounded-xl transition leading-tight {% if tab == 'onaylar' %}bg-white text-slate-900 shadow-2xs{% else %}text-slate-600{% endif %}">
-            <span>Onay</span>
-            <span>({{ pending_users|length }})</span>
-        </a>
-        <a href="/admin/dashboard?tab=grup_onaylari" class="py-2 flex flex-col items-center justify-center rounded-xl transition leading-tight {% if tab == 'grup_onaylari' %}bg-white text-emerald-800 shadow-2xs{% else %}text-slate-600{% endif %}">
-            <span>Grup</span>
-            <span>({{ pending_groups|length }})</span>
-        </a>
-        <a href="/admin/dashboard?tab=uyeler" class="py-2 flex flex-col items-center justify-center rounded-xl transition leading-tight {% if tab == 'uyeler' %}bg-white text-slate-900 shadow-2xs{% else %}text-slate-600{% endif %}">
-            <span>Üyeler</span>
-            <span>({{ all_users|length }})</span>
-        </a>
-        <a href="/admin/dashboard?tab=portfoyler" class="py-2 flex flex-col items-center justify-center rounded-xl transition leading-tight {% if tab == 'portfoyler' %}bg-white text-slate-900 shadow-2xs{% else %}text-slate-600{% endif %}">
-            <span>Portföy</span>
-            <span>({{ all_portfolios|length }})</span>
-        </a>
-        <a href="/admin/dashboard?tab=destek" class="py-2 flex flex-col items-center justify-center rounded-xl transition leading-tight {% if tab == 'destek' %}bg-white text-emerald-800 shadow-2xs{% else %}text-slate-600{% endif %}">
-            <span>Destek</span>
-            <span>({{ tickets|length }})</span>
-        </a>
-    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-8 pt-6 space-y-6">
 
-    <!-- ================= 1. EMLAKÇI ONAYLARI SEKMESİ ================= -->
-    {% if tab == 'onaylar' %}
-    <div class="space-y-3 pt-1">
-        {% if pending_users and pending_users|length > 0 %}
-            {% for u in pending_users %}
-            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
-                <div class="flex items-start gap-3">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 font-extrabold flex items-center justify-center shrink-0 overflow-hidden border border-emerald-200">
-                        {% if u.profil_foto %}
-                            <img src="{{ u.profil_foto }}" class="w-full h-full object-cover">
-                        {% else %}
-                            {{ (u.ad_soyad[:2] if u.ad_soyad else 'EM').upper() }}
-                        {% endif %}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h3 class="text-xs font-bold text-slate-900 truncate">{{ u.ad_soyad }}</h3>
-                        <p class="text-[11px] text-emerald-700 font-semibold truncate">{{ u.sirket_unvani or 'Şirket Yok' }}</p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">📞 {{ u.telefon or '-' }} | ✉️ {{ u.eposta }}</p>
-                    </div>
+        <!-- ================= 3 ANA SEKMELİ YÖNETİM BAR ================= -->
+        <div class="grid grid-cols-3 gap-2 p-1.5 bg-white/[0.03] rounded-2xl border border-white/[0.08] max-w-lg mx-auto sm:mx-0">
+            <a href="/admin/dashboard?tab=onaylar" 
+               class="py-2.5 px-3 rounded-xl text-xs font-black text-center transition flex items-center justify-center gap-2 {% if tab == 'onaylar' %}bg-emerald-600 text-white shadow-md shadow-emerald-950/50{% else %}text-slate-400 hover:text-white hover:bg-white/[0.04]{% endif %}">
+                <span>Başvuru Onayları</span>
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] {% if tab == 'onaylar' %}bg-black/30 text-emerald-200{% else %}bg-white/10 text-slate-300{% endif %}">
+                    {{ pending_users|length }}
+                </span>
+            </a>
+
+            <a href="/admin/dashboard?tab=uyeler" 
+               class="py-2.5 px-3 rounded-xl text-xs font-black text-center transition flex items-center justify-center gap-2 {% if tab == 'uyeler' %}bg-emerald-600 text-white shadow-md shadow-emerald-950/50{% else %}text-slate-400 hover:text-white hover:bg-white/[0.04]{% endif %}">
+                <span>Kayıtlı Üyeler</span>
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] {% if tab == 'uyeler' %}bg-black/30 text-emerald-200{% else %}bg-white/10 text-slate-300{% endif %}">
+                    {{ (agents|length) + (companies|length) }}
+                </span>
+            </a>
+
+            <a href="/admin/dashboard?tab=destek" 
+               class="py-2.5 px-3 rounded-xl text-xs font-black text-center transition flex items-center justify-center gap-2 {% if tab == 'destek' %}bg-emerald-600 text-white shadow-md shadow-emerald-950/50{% else %}text-slate-400 hover:text-white hover:bg-white/[0.04]{% endif %}">
+                <span>Destek Masası</span>
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] {% if tab == 'destek' %}bg-black/30 text-emerald-200{% else %}bg-white/10 text-slate-300{% endif %}">
+                    {{ tickets|length }}
+                </span>
+            </a>
+        </div>
+
+        <!-- ================= 1. TAB: BAŞVURU ONAYLARI ================= -->
+        {% if tab == 'onaylar' %}
+        <div class="space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+                <div>
+                    <h2 class="text-base font-black text-white">İnceleme Bekleyen Üyelik Başvuruları</h2>
+                    <p class="text-xs text-slate-400">Yetki belgesi ve sicil no kontrolü yaparak onaylayın veya reddedin.</p>
                 </div>
+            </div>
 
-                <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1.5">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase">Yetki Belge No:</span>
-                        <span class="font-mono font-bold text-slate-800">{{ u.yetki_belgesi_no or 'Girilmedi' }}</span>
+            {% if pending_users and pending_users|length > 0 %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for u in pending_users %}
+                {% set is_comp = (u.firma_tipi in ['sirket', 'proje_firmasi', 'developer']) %}
+                <div class="bg-[#121A1D] border border-white/[0.08] rounded-2xl p-4 space-y-3.5 shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 font-black text-sm flex items-center justify-center border border-emerald-500/20 overflow-hidden shrink-0">
+                                {% if u.profil_foto %}
+                                    <img src="{{ u.profil_foto }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    {{ (u.ad_soyad[:2] if u.ad_soyad else 'EM').upper() }}
+                                {% endif %}
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-bold text-white truncate">{{ u.ad_soyad }}</h3>
+                                <p class="text-[11px] text-emerald-400 font-semibold truncate">{{ u.sirket_unvani or 'Şirket Belirtilmedi' }}</p>
+                                <span class="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md {% if is_comp %}bg-purple-500/10 text-purple-300 border border-purple-500/30{% else %}bg-emerald-500/10 text-emerald-300 border border-emerald-500/30{% endif %}">
+                                    {{ 'Proje Firması' if is_comp else 'Emlakçı Danışman' }}
+                                </span>
+                            </div>
+                        </div>
                     </div>
+
+                    <div class="p-3 bg-white/[0.02] border border-white/[0.05] rounded-xl text-xs space-y-1 font-mono text-slate-300">
+                        <div>📞 {{ u.telefon or '-' }}</div>
+                        <div class="truncate">✉️ {{ u.eposta }}</div>
+                        <div class="pt-1 flex items-center justify-between font-sans text-[11px]">
+                            <span class="text-slate-400">Yetki Belge / Sicil No:</span>
+                            <span class="font-bold text-white">{{ u.yetki_belgesi_no or 'Girilmedi' }}</span>
+                        </div>
+                    </div>
+
                     {% if u.yetki_belgesi_url %}
-                    <a href="{{ u.yetki_belgesi_url }}" target="_blank" class="block w-full py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-center font-bold text-[11px] rounded-lg border border-emerald-200 transition">
-                        Belgeyi Yeni Sekmede Aç
+                    <a href="{{ u.yetki_belgesi_url }}" target="_blank" class="block w-full py-2 bg-white/[0.04] hover:bg-white/[0.08] text-emerald-400 text-center font-bold text-xs rounded-xl border border-emerald-500/20 transition">
+                        📄 Yetki Belgesini İncele (Yeni Sekme)
                     </a>
                     {% endif %}
-                </div>
 
-                <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                    <form action="/admin/users/approve/{{ u.id }}" method="POST">
-                        <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-2xs active:scale-95">
-                            ✓ Onayla
-                        </button>
-                    </form>
-                    <form action="/admin/users/reject/{{ u.id }}" method="POST" onsubmit="return confirm('Başvuruyu reddetmek istediğinize emin misiniz?');">
-                        <button type="submit" class="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl transition border border-rose-200 active:scale-95">
-                            ✕ Reddet
-                        </button>
-                    </form>
+                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.06]">
+                        <form action="/admin/users/approve/{{ u.id }}" method="POST">
+                            <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl transition active:scale-95 shadow-md shadow-emerald-950/40">
+                                ✓ Başvuruyu Onayla
+                            </button>
+                        </form>
+                        <form action="/admin/users/reject/{{ u.id }}" method="POST" onsubmit="return confirm('Başvuruyu reddetmek istediğinize emin misiniz?');">
+                            <button type="submit" class="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-black text-xs rounded-xl transition active:scale-95">
+                                ✕ Reddet
+                            </button>
+                        </form>
+                    </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        {% else %}
-            <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-1 shadow-2xs">
-                <p class="text-xs font-bold text-slate-700">Onay Bekleyen Kayıt Yok</p>
+            {% else %}
+            <div class="py-16 text-center bg-[#121A1D] border border-white/[0.08] rounded-3xl space-y-2">
+                <span class="text-3xl">✨</span>
+                <p class="text-sm font-bold text-white">İnceleme Bekleyen Yeni Başvuru Yok</p>
+                <p class="text-xs text-slate-400">Tüm üyelik başvuruları incelenmiş ve sonuçlandırılmıştır.</p>
             </div>
+            {% endif %}
+        </div>
         {% endif %}
-    </div>
-    {% endif %}
 
-    <!-- ================= 2. GRUP ONAYLARI SEKMESİ ================= -->
-    {% if tab == 'grup_onaylari' %}
-    <div class="space-y-3 pt-1">
-        {% if pending_groups and pending_groups|length > 0 %}
-            {% for g in pending_groups %}
-            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
-                            {{ g.kategori }}
-                        </span>
-                        <h3 class="text-xs font-black text-slate-900 mt-1.5">{{ g.ad }}</h3>
-                        <p class="text-[10px] text-slate-400">Kapsam: {{ g.ilce or 'Tüm Şehir' }} | Katılım: {{ g.katilim_tipi|capitalize }}</p>
-                    </div>
+        <!-- ================= 2. TAB: KAYITLI ÜYELER (EMLAKÇILAR & PROJE FİRMALARI AYRIMI) ================= -->
+        {% if tab == 'uyeler' %}
+        <div class="space-y-4">
+            
+            <!-- Alt Kategori Filtresi: Emlakçılar vs Firmalar -->
+            <div class="flex items-center justify-between flex-wrap gap-3 pb-2 border-b border-white/[0.06]">
+                <div class="flex items-center gap-2 p-1 bg-white/[0.03] rounded-xl border border-white/[0.08]">
+                    <button type="button" 
+                            id="filterBtnAgent" 
+                            onclick="switchMemberCategory('agent')" 
+                            class="px-4 py-1.5 rounded-lg text-xs font-black transition bg-emerald-600 text-white shadow-sm">
+                        Emlakçı Danışmanlar ({{ agents|length }})
+                    </button>
+                    <button type="button" 
+                            id="filterBtnCompany" 
+                            onclick="switchMemberCategory('company')" 
+                            class="px-4 py-1.5 rounded-lg text-xs font-black transition text-slate-400 hover:text-white">
+                        Proje & İnşaat Firmaları ({{ companies|length }})
+                    </button>
                 </div>
 
-                <div class="p-3 bg-slate-50 rounded-xl text-xs text-slate-700 border border-slate-100 leading-relaxed">
-                    {{ g.aciklama }}
-                </div>
-
-                <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-                    <span class="font-semibold">Kurucu: {{ g.kurucu.ad_soyad if g.kurucu else 'Bilinmiyor' }} ({{ g.kurucu.sirket_unvani or 'Broker' }})</span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 pt-1">
-                    <form action="/admin/groups/approve/{{ g.id }}" method="POST">
-                        <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-2xs">
-                            ✓ Grubu Onayla
-                        </button>
-                    </form>
-                    <form action="/admin/groups/reject/{{ g.id }}" method="POST" onsubmit="return confirm('Bu grup başvurusunu reddetmek istediğinize emin misiniz?');">
-                        <button type="submit" class="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl transition border border-rose-200">
-                            ✕ Reddet
-                        </button>
-                    </form>
+                <div class="text-xs text-slate-400">
+                    Kullanıcı kartına tıklayarak portföy, proje ve işbirliği geçmişini inceleyebilirsiniz.
                 </div>
             </div>
-            {% endfor %}
-        {% else %}
-            <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-400">
-                Onay bekleyen yeni bir grup kurma başvurusu bulunmuyor.
-            </div>
-        {% endif %}
-    </div>
-    {% endif %}
 
-    <!-- ================= 3. TÜM ÜYELER SEKMESİ ================= -->
-    {% if tab == 'uyeler' %}
-    <div class="space-y-3 pt-1">
-        {% for u in all_users %}
-        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-2xs space-y-2.5">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2.5 truncate">
-                    <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold flex items-center justify-center shrink-0">
-                        {{ (u.ad_soyad[:2] if u.ad_soyad else 'EM').upper() }}
+            <!-- 2.A: Emlakçılar Listesi -->
+            <div id="agentListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for u in agents %}
+                <div class="bg-[#121A1D] border border-white/[0.08] hover:border-emerald-500/50 rounded-2xl p-4 space-y-3 transition duration-150 shadow-md group">
+                    <div class="flex items-start justify-between gap-2">
+                        <div onclick="openUserDetailDrawer('{{ u.id }}')" class="flex items-center gap-3 cursor-pointer min-w-0 flex-1">
+                            <div class="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-black flex items-center justify-center shrink-0 border border-emerald-500/20 overflow-hidden">
+                                {% if u.profil_foto %}
+                                    <img src="{{ u.profil_foto }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    {{ (u.ad_soyad[:2] if u.ad_soyad else 'EM').upper() }}
+                                {% endif %}
+                            </div>
+                            <div class="truncate">
+                                <h3 class="text-sm font-bold text-white group-hover:text-emerald-400 transition truncate">{{ u.ad_soyad }}</h3>
+                                <p class="text-[11px] text-slate-400 truncate">{{ u.sirket_unvani or 'Bağımsız Danışman' }}</p>
+                            </div>
+                        </div>
+
+                        {% if u.durum == 'aktif' %}
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Aktif</span>
+                        {% elif u.durum == 'askida' %}
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/30">Donduruldu</span>
+                        {% else %}
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-500/10 text-rose-400 border border-rose-500/30">{{ u.durum }}</span>
+                        {% endif %}
                     </div>
-                    <div class="truncate">
-                        <h3 class="text-xs font-bold text-slate-900 truncate">{{ u.ad_soyad }}</h3>
-                        <p class="text-[10px] text-slate-400 truncate">{{ u.eposta }}</p>
+
+                    <!-- İletişim Bilgileri (Admin İçin Görünür) -->
+                    <div onclick="openUserDetailDrawer('{{ u.id }}')" class="p-2.5 bg-white/[0.02] border border-white/[0.04] rounded-xl text-xs space-y-1 font-mono text-slate-300 cursor-pointer">
+                        <div class="truncate">📞 {{ u.telefon or 'Telefon Yok' }}</div>
+                        <div class="truncate text-slate-400">✉️ {{ u.eposta }}</div>
+                    </div>
+
+                    <!-- Aksiyon Butonları -->
+                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.06] text-xs font-bold">
+                        <button type="button" onclick="openActionModal('pause', '{{ u.id }}', '{{ u.ad_soyad }}', '{{ u.eposta }}', '{{ u.durum }}')" class="py-2 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 rounded-xl transition">
+                            {% if u.durum == 'askida' %}Aktif Et{% else %}Duraklat{% endif %}
+                        </button>
+                        <button type="button" onclick="openActionModal('delete', '{{ u.id }}', '{{ u.ad_soyad }}', '{{ u.eposta }}')" class="py-2 px-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 rounded-xl transition">
+                            Üyeyi Sil
+                        </button>
                     </div>
                 </div>
-
-                {% if u.durum == 'aktif' %}
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Aktif</span>
-                {% elif u.durum == 'askida' %}
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Donduruldu</span>
                 {% else %}
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">{{ u.durum }}</span>
-                {% endif %}
+                <div class="col-span-full py-12 text-center text-xs text-slate-400">Kayıtlı emlakçı danışman bulunmuyor.</div>
+                {% endfor %}
             </div>
 
-            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs font-bold">
-                <button type="button" onclick="openActionModal('pause', '{{ u.id }}', '{{ u.ad_soyad }}', '{{ u.eposta }}', '{{ u.durum }}')" class="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl transition">
-                    {% if u.durum == 'askida' %}Aktif Et{% else %}Duraklat{% endif %}
-                </button>
-                <button type="button" onclick="openActionModal('delete', '{{ u.id }}', '{{ u.ad_soyad }}', '{{ u.eposta }}')" class="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition">
-                    Üyeyi Sil
-                </button>
+            <!-- 2.B: Şirket / Proje Firmaları Listesi -->
+            <div id="companyListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+                {% for c in companies %}
+                <div class="bg-[#121A1D] border border-white/[0.08] hover:border-purple-500/50 rounded-2xl p-4 space-y-3 transition duration-150 shadow-md group">
+                    <div class="flex items-start justify-between gap-2">
+                        <div onclick="openUserDetailDrawer('{{ c.id }}')" class="flex items-center gap-3 cursor-pointer min-w-0 flex-1">
+                            <div class="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-400 text-sm font-black flex items-center justify-center shrink-0 border border-purple-500/20 overflow-hidden">
+                                {% if c.profil_foto %}
+                                    <img src="{{ c.profil_foto }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    {{ (c.sirket_unvani[:2] if c.sirket_unvani else (c.ad_soyad[:2] if c.ad_soyad else 'CO')).upper() }}
+                                {% endif %}
+                            </div>
+                            <div class="truncate">
+                                <h3 class="text-sm font-bold text-white group-hover:text-purple-400 transition truncate">{{ c.sirket_unvani or c.ad_soyad }}</h3>
+                                <p class="text-[11px] text-slate-400 truncate">Yetkili: {{ c.ad_soyad }}</p>
+                            </div>
+                        </div>
+
+                        {% if c.durum == 'aktif' %}
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Aktif</span>
+                        {% elif c.durum == 'askida' %}
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/30">Donduruldu</span>
+                        {% else %}
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-500/10 text-rose-400 border border-rose-500/30">{{ c.durum }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- İletişim Bilgileri (Admin İçin Görünür) -->
+                    <div onclick="openUserDetailDrawer('{{ c.id }}')" class="p-2.5 bg-white/[0.02] border border-white/[0.04] rounded-xl text-xs space-y-1 font-mono text-slate-300 cursor-pointer">
+                        <div class="truncate">📞 {{ c.telefon or 'Telefon Yok' }}</div>
+                        <div class="truncate text-slate-400">✉️ {{ c.eposta }}</div>
+                    </div>
+
+                    <!-- Aksiyon Butonları -->
+                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.06] text-xs font-bold">
+                        <button type="button" onclick="openActionModal('pause', '{{ c.id }}', '{{ c.ad_soyad }}', '{{ c.eposta }}', '{{ c.durum }}')" class="py-2 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 rounded-xl transition">
+                            {% if c.durum == 'askida' %}Aktif Et{% else %}Duraklat{% endif %}
+                        </button>
+                        <button type="button" onclick="openActionModal('delete', '{{ c.id }}', '{{ c.ad_soyad }}', '{{ c.eposta }}')" class="py-2 px-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 rounded-xl transition">
+                            Firmayı Sil
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-span-full py-12 text-center text-xs text-slate-400">Kayıtlı proje/inşaat firması bulunmuyor.</div>
+                {% endfor %}
             </div>
+
         </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- ================= 4. TÜM PORTFÖYLER SEKMESİ ================= -->
-    {% if tab == 'portfoyler' %}
-    <div class="space-y-3 pt-1">
-        {% for p in all_portfolios %}
-        <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-2xs flex gap-3">
-            <div class="w-20 h-20 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-100">
-                <img src="{{ p.ana_fotograf or 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=300&q=80' }}" class="w-full h-full object-cover">
-            </div>
-            <div class="flex-1 min-w-0 flex flex-col justify-between">
-                <div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-extrabold uppercase text-slate-400">{{ p.gayrimenkul_tipi }}</span>
-                        <span class="text-[10px] font-bold text-emerald-700">{{ p.durum }}</span>
-                    </div>
-                    <h3 class="text-xs font-bold text-slate-900 truncate mt-0.5">
-                        {{ p.ilce }} {% if p.mahalle_site %}- {{ p.mahalle_site }}{% endif %}
-                    </h3>
-                    <div class="text-xs font-black text-slate-900 mt-1">
-                        {% if p.fiyat %}{{ '{:,}'.format(p.fiyat).replace(',', '.') }} TL{% else %}Fiyat Yok{% endif %}
-                    </div>
-                </div>
-                <div class="pt-1.5 border-t border-slate-100 text-[10px] text-slate-500 font-semibold truncate">
-                    Danışman: {{ p.users.ad_soyad if p.users else 'Bilinmiyor' }}
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- ================= 5. DESTEK / BİLDİRİM MASASI SEKMESİ ================= -->
-    {% if tab == 'destek' %}
-    <div class="space-y-3 pt-1">
-        {% if tickets and tickets|length > 0 %}
-            {% for t in tickets %}
-            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md {% if t.durum == 'cozuldu' %}bg-emerald-100 text-emerald-800{% elif t.durum == 'inceleniyor' %}bg-blue-100 text-blue-800{% else %}bg-amber-100 text-amber-800{% endif %}">
-                            {{ t.durum|upper }}
-                        </span>
-                        <h3 class="text-xs font-bold text-slate-900 mt-1.5">{{ t.konu }}</h3>
-                        <p class="text-[10px] text-slate-400 font-mono">{{ t.created_at[:16].replace('T', ' ') }}</p>
-                    </div>
-                </div>
-
-                <div class="p-3 bg-slate-50 rounded-xl text-xs text-slate-700 border border-slate-100 leading-relaxed break-words">
-                    {{ t.mesaj }}
-                </div>
-
-                <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-                    <span class="font-semibold">{{ t.sender.ad_soyad if t.sender else 'Bilinmeyen Üye' }} ({{ t.sender.telefon if t.sender else '-' }})</span>
-                </div>
-
-                <!-- Durum Güncelleme Butonları -->
-                <form action="/admin/tickets/update-status/{{ t.id }}" method="POST" class="grid grid-cols-2 gap-2 pt-1">
-                    <button type="submit" name="durum" value="inceleniyor" class="py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl border border-blue-200 transition">
-                        İnceleniyor Yap
-                    </button>
-                    <button type="submit" name="durum" value="cozuldu" class="py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 transition">
-                        ✓ Çözüldü İşaretle
-                    </button>
-                </form>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-400">
-                Henüz iletilen bir destek veya şikayet bildirimi bulunmuyor.
-            </div>
         {% endif %}
+
+        <!-- ================= 3. TAB: DESTEK MASASI ================= -->
+        {% if tab == 'destek' %}
+        <div class="space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+                <div>
+                    <h2 class="text-base font-black text-white">Danışman ve Firma Destek Talepleri</h2>
+                    <p class="text-xs text-slate-400">Üyelerin ayarlar ve destek üzerinden açtığı biletleri yanıtlayın ve statülerini güncelleyin.</p>
+                </div>
+            </div>
+
+            {% if tickets and tickets|length > 0 %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for t in tickets %}
+                <div class="bg-[#121A1D] border border-white/[0.08] rounded-2xl p-5 space-y-3.5 shadow-md">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md {% if t.durum == 'cozuldu' %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/30{% elif t.durum == 'inceleniyor' %}bg-blue-500/10 text-blue-400 border border-blue-500/30{% else %}bg-amber-500/10 text-amber-400 border border-amber-500/30{% endif %}">
+                                {{ t.durum|upper }}
+                            </span>
+                            <h3 class="text-sm font-bold text-white mt-2">{{ t.konu }}</h3>
+                            <span class="text-[10px] text-slate-400 font-mono">{{ t.created_at[:16].replace('T', ' ') }}</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 bg-white/[0.02] rounded-xl text-xs text-slate-300 border border-white/[0.05] leading-relaxed break-words">
+                        {{ t.mesaj }}
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/[0.06]">
+                        <span class="font-bold text-slate-200">
+                            {{ t.sender.ad_soyad if t.sender else 'Bilinmeyen Üye' }} 
+                            <span class="text-[11px] text-emerald-400 font-mono">({{ t.sender.telefon if t.sender else '-' }})</span>
+                        </span>
+                        <span class="text-[11px] text-slate-500">{{ t.sender.eposta if t.sender else '' }}</span>
+                    </div>
+
+                    <form action="/admin/tickets/update-status/{{ t.id }}" method="POST" class="grid grid-cols-2 gap-2 pt-1">
+                        <button type="submit" name="durum" value="inceleniyor" class="py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold rounded-xl transition">
+                            İnceleniyor
+                        </button>
+                        <button type="submit" name="durum" value="cozuldu" class="py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold rounded-xl transition">
+                            ✓ Çözüldü
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="py-16 text-center bg-[#121A1D] border border-white/[0.08] rounded-3xl space-y-2">
+                <span class="text-3xl">💬</span>
+                <p class="text-sm font-bold text-white">Bekleyen Destek Bildirimi Yok</p>
+                <p class="text-xs text-slate-400">Üyeler tarafından iletilen yeni bir soru veya şikayet bulunmuyor.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
     </div>
-    {% endif %}
 </div>
 
-<!-- 3 AŞAMALI GÜVENLİK MODALI -->
-<div id="safetyModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end justify-center hidden">
-    <div class="w-full max-w-md bg-white rounded-t-3xl p-6 space-y-4 shadow-2xl">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-            <h3 id="modalTitle" class="text-sm font-black text-slate-900">Güvenlikli Onay</h3>
-            <button onclick="closeActionModal()" class="text-slate-400 text-lg font-bold">✕</button>
+<!-- ================= SAĞDAN AÇILAN KAPSAMLI ÜYE İNCELEME ÇEKMECESİ (DRAWER) ================= -->
+<div id="userDetailDrawer" onclick="closeUserDetailDrawer()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex justify-end opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="drawerContent" onclick="event.stopPropagation()" class="w-full max-w-xl bg-[#101719] border-l border-white/[0.1] h-full overflow-y-auto p-6 space-y-6 transform translate-x-full transition-transform duration-300 text-slate-100 shadow-2xl">
+        
+        <!-- Drawer Header -->
+        <div class="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+            <div class="flex items-center gap-3">
+                <div id="drawerAvatar" class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 font-black text-base flex items-center justify-center border border-emerald-500/20 overflow-hidden shrink-0"></div>
+                <div>
+                    <h3 id="drawerUserName" class="text-base font-black text-white">Yükleniyor...</h3>
+                    <p id="drawerUserRole" class="text-xs text-emerald-400 font-bold">Gayrimenkul Danışmanı</p>
+                </div>
+            </div>
+            <button onclick="closeUserDetailDrawer()" class="p-2 text-slate-400 hover:text-white text-xl font-bold leading-none">✕</button>
         </div>
 
-        <div class="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 space-y-1">
-            <p><strong>Hedef:</strong> <span id="modalTargetName" class="font-black"></span></p>
+        <!-- İletişim & Kurumsal Bilgiler -->
+        <div class="p-4 bg-white/[0.02] border border-white/[0.06] rounded-2xl space-y-2 text-xs font-mono">
+            <div class="flex justify-between"><span class="text-slate-400 font-sans">E-Posta:</span> <span id="drawerEmail" class="text-white font-bold"></span></div>
+            <div class="flex justify-between"><span class="text-slate-400 font-sans">Telefon:</span> <span id="drawerPhone" class="text-white font-bold"></span></div>
+            <div class="flex justify-between"><span class="text-slate-400 font-sans">Şirket/Ofis:</span> <span id="drawerOffice" class="text-emerald-400 font-sans font-bold"></span></div>
+            <div id="drawerInvitedBox" class="flex justify-between pt-1 border-t border-white/[0.05]">
+                <span class="text-slate-400 font-sans">Davet Eden:</span> 
+                <span id="drawerInvitedBy" class="text-amber-300 font-sans font-bold">-</span>
+            </div>
+        </div>
+
+        <!-- Dinamik Alan: Portföyler & İşbirlikleri VEYA Projeler & Satışlar -->
+        <div id="drawerDynamicContent" class="space-y-5">
+            <!-- JavaScript ile doldurulacak -->
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= 3 AŞAMALI GÜVENLİK MODALI (DURAKLAT / SİL) ================= -->
+<div id="safetyModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center hidden p-4">
+    <div class="w-full max-w-md bg-[#121A1D] border border-white/10 rounded-3xl p-6 space-y-4 shadow-2xl text-slate-100">
+        <div class="flex items-center justify-between border-b border-white/[0.08] pb-3">
+            <h3 id="modalTitle" class="text-sm font-black text-white">Güvenlik Onayı</h3>
+            <button onclick="closeActionModal()" class="text-slate-400 hover:text-white text-lg font-bold leading-none">✕</button>
+        </div>
+
+        <div class="p-3.5 bg-rose-500/10 border border-rose-500/25 rounded-2xl text-xs text-rose-200 space-y-1">
+            <p><strong>Hedef Üye:</strong> <span id="modalTargetName" class="font-bold text-white"></span></p>
             <p><strong>E-Posta:</strong> <span id="modalTargetEmail" class="font-mono text-[11px]"></span></p>
-            <p id="modalWarnText" class="text-[10px] text-rose-700 pt-1"></p>
+            <p id="modalWarnText" class="text-[11px] text-rose-400 pt-1 leading-relaxed"></p>
         </div>
 
-        <form id="modalForm" action="" method="POST" class="space-y-3 text-xs">
+        <form id="modalForm" action="" method="POST" class="space-y-3.5 text-xs">
             <input type="hidden" name="target_email" id="modalHiddenEmail">
 
-            <label class="flex items-start gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
+            <label class="flex items-start gap-2.5 p-3 bg-white/[0.03] rounded-xl border border-white/[0.08] cursor-pointer">
                 <input type="checkbox" id="chkStep1" onchange="checkFormValidity()" class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
-                <span id="chkLabel" class="text-[11px] font-bold text-slate-700 leading-tight">Bu işlemin sonuçlarını anladım ve onaylıyorum.</span>
+                <span id="chkLabel" class="text-[11px] font-bold text-slate-300 leading-tight">Bu işlemin sonuçlarını anladım ve onaylıyorum.</span>
             </label>
 
             <div>
-                <label class="block text-[11px] font-bold text-slate-600 mb-1">E-postayı buraya yazın:</label>
-                <input type="email" id="confirmEmailInput" name="confirm_email" oninput="checkFormValidity()" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                <label class="block text-[11px] font-bold text-slate-400 mb-1">Onaylamak için yukarıdaki e-postayı yazın:</label>
+                <input type="email" id="confirmEmailInput" name="confirm_email" oninput="checkFormValidity()" class="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl font-mono text-xs text-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
             </div>
 
-            <button type="submit" id="btnExecute" disabled class="w-full py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold rounded-xl transition shadow-xs">
+            <button type="submit" id="btnExecute" disabled class="w-full py-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black rounded-xl transition shadow-md shadow-rose-950/50">
                 İşlemi Tamamla
             </button>
         </form>
@@ -292,6 +401,180 @@
 </div>
 
 <script>
+    // 1. Üye Kategori Değiştirici (Emlakçı vs Firma)
+    function switchMemberCategory(type) {
+        const btnAgent = document.getElementById('filterBtnAgent');
+        const btnCompany = document.getElementById('filterBtnCompany');
+        const listAgent = document.getElementById('agentListContainer');
+        const listCompany = document.getElementById('companyListContainer');
+
+        if (type === 'agent') {
+            btnAgent.className = 'px-4 py-1.5 rounded-lg text-xs font-black transition bg-emerald-600 text-white shadow-sm';
+            btnCompany.className = 'px-4 py-1.5 rounded-lg text-xs font-black transition text-slate-400 hover:text-white';
+            listAgent.classList.remove('hidden');
+            listCompany.classList.add('hidden');
+        } else {
+            btnCompany.className = 'px-4 py-1.5 rounded-lg text-xs font-black transition bg-purple-600 text-white shadow-sm';
+            btnAgent.className = 'px-4 py-1.5 rounded-lg text-xs font-black transition text-slate-400 hover:text-white';
+            listCompany.classList.remove('hidden');
+            listAgent.classList.add('hidden');
+        }
+    }
+
+    // 2. Üye Detay Drawer API Entegrasyonu
+    async function openUserDetailDrawer(userId) {
+        const drawer = document.getElementById('userDetailDrawer');
+        const content = document.getElementById('drawerContent');
+        const dynamicContent = document.getElementById('drawerDynamicContent');
+
+        drawer.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('translate-x-full');
+
+        dynamicContent.innerHTML = '<div class="py-12 text-center text-xs text-slate-400 font-bold">Bilgiler yükleniyor...</div>';
+
+        try {
+            const res = await fetch(`/admin/api/user-detail/${userId}`);
+            const result = await res.json();
+            
+            if (!result.success) {
+                dynamicContent.innerHTML = '<div class="text-rose-400 text-xs">Veri alınamadı.</div>';
+                return;
+            }
+
+            const data = result.data;
+            const u = data.user;
+
+            document.getElementById('drawerUserName').innerText = u.ad_soyad || 'İsimsiz Üye';
+            document.getElementById('drawerUserRole').innerText = data.is_company ? 'Proje Geliştirici / Firma' : 'Gayrimenkul Danışmanı';
+            document.getElementById('drawerEmail').innerText = u.eposta;
+            document.getElementById('drawerPhone').innerText = u.telefon || '-';
+            document.getElementById('drawerOffice').innerText = u.sirket_unvani || '-';
+
+            const avBox = document.getElementById('drawerAvatar');
+            if (u.profil_foto) {
+                avBox.innerHTML = `<img src="${u.profil_foto}" class="w-full h-full object-cover">`;
+            } else {
+                avBox.innerText = (u.ad_soyad ? u.ad_soyad.substring(0, 2) : 'EM').toUpperCase();
+            }
+
+            // Davet Eden
+            const invitedEl = document.getElementById('drawerInvitedBy');
+            if (data.invited_by) {
+                invitedEl.innerText = `${data.invited_by.ad_soyad} (${data.invited_by.telefon || '-'})`;
+            } else {
+                invitedEl.innerText = 'Doğrudan Başvuru / Davet Edilmemiş';
+            }
+
+            // İçerik Doldurma (Emlakçı vs Firma)
+            if (!data.is_company) {
+                let html = `
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-black uppercase text-emerald-400 tracking-wider">Danışmanın Portföyleri (${data.portfolios.length})</h4>
+                        <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                `;
+                if (data.portfolios.length > 0) {
+                    data.portfolios.forEach(p => {
+                        html += `
+                            <div class="p-2.5 bg-white/[0.03] border border-white/[0.06] rounded-xl flex items-center justify-between text-xs">
+                                <div>
+                                    <div class="font-bold text-white">${p.gayrimenkul_tipi} - ${p.ilce}</div>
+                                    <div class="text-[10px] text-slate-400">${p.fiyat ? p.fiyat.toLocaleString('tr-TR') + ' TL' : 'Fiyat Yok'}</div>
+                                </div>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">${p.durum}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<div class="text-[11px] text-slate-500 italic">Yayınlanmış aktif portföyü yok.</div>';
+                }
+                html += `</div></div>`;
+
+                html += `
+                    <div class="space-y-3 pt-2">
+                        <h4 class="text-xs font-black uppercase text-emerald-400 tracking-wider">Tamamlanan İşbirlikleri (${data.collaborations.length})</h4>
+                        <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                `;
+                if (data.collaborations.length > 0) {
+                    data.collaborations.forEach(c => {
+                        html += `
+                            <div class="p-2.5 bg-white/[0.03] border border-white/[0.06] rounded-xl text-xs space-y-1">
+                                <div class="flex justify-between font-bold">
+                                    <span class="text-white">${c.isbirligi_kosulu || 'İşbirliği'}</span>
+                                    <span class="text-emerald-400 text-[10px]">${c.durum}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 font-mono">Tarih: ${c.created_at ? c.created_at.substring(0, 10) : '-'}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<div class="text-[11px] text-slate-500 italic">Henüz bir işbirliği kaydı bulunmuyor.</div>';
+                }
+                html += `</div></div>`;
+
+                dynamicContent.innerHTML = html;
+
+            } else {
+                // Şirket Görünümü: Projeler & Satışlar
+                let html = `
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-black uppercase text-purple-400 tracking-wider">Firmanın Projeleri (${data.projects.length})</h4>
+                        <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                `;
+                if (data.projects.length > 0) {
+                    data.projects.forEach(pr => {
+                        html += `
+                            <div class="p-2.5 bg-white/[0.03] border border-white/[0.06] rounded-xl flex items-center justify-between text-xs">
+                                <div>
+                                    <div class="font-bold text-white">${pr.ad} (${pr.ilce})</div>
+                                    <div class="text-[10px] text-emerald-400 font-bold">Komisyon: %${pr.partner_komisyon_orani || 3}</div>
+                                </div>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">${pr.durum}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<div class="text-[11px] text-slate-500 italic">Yayınlanan proje bulunmuyor.</div>';
+                }
+                html += `</div></div>`;
+
+                html += `
+                    <div class="space-y-3 pt-2">
+                        <h4 class="text-xs font-black uppercase text-purple-400 tracking-wider">Danışmanlarla Yapılan Tescil / Satışlar (${data.project_sales.length})</h4>
+                        <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                `;
+                if (data.project_sales.length > 0) {
+                    data.project_sales.forEach(s => {
+                        html += `
+                            <div class="p-2.5 bg-white/[0.03] border border-white/[0.06] rounded-xl text-xs space-y-1">
+                                <div class="flex justify-between font-bold">
+                                    <span class="text-white">${s.musteri_ad_soyad}</span>
+                                    <span class="text-emerald-400 text-[10px]">${s.durum}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400">Danışman: ${s.users ? s.users.ad_soyad : 'Bilinmiyor'} (${s.users ? s.users.telefon : '-'})</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<div class="text-[11px] text-slate-500 italic">Henüz gerçekleşen bir müşteri tescili veya satış yok.</div>';
+                }
+                html += `</div></div>`;
+
+                dynamicContent.innerHTML = html;
+            }
+
+        } catch (e) {
+            dynamicContent.innerHTML = `<div class="text-rose-400 text-xs">Bağlantı hatası: ${e.message}</div>`;
+        }
+    }
+
+    function closeUserDetailDrawer() {
+        const drawer = document.getElementById('userDetailDrawer');
+        const content = document.getElementById('drawerContent');
+        drawer.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('translate-x-full');
+    }
+
+    // 3. Güvenlikli İşlem Modalı (Duraklat & Kesin Sil)
     let expectedEmail = "";
 
     function openActionModal(actionType, userId, userName, userEmail, currentStatus) {
@@ -312,14 +595,14 @@
             form.action = `/admin/users/toggle-pause/${userId}`;
             const isPaused = (currentStatus === 'askida');
             title.innerText = isPaused ? "Üyeliği Yeniden Aktif Et" : "Üyeliği Duraklat / Askıya Al";
-            warn.innerText = isPaused ? "Kullanıcının portföyleri ve girişi aktif edilecektir." : "Kullanıcının portföyleri pasife çekilecek ve sisteme girişi kapatılacaktır.";
+            warn.innerText = isPaused ? "Kullanıcının portföyleri ve hesabı yeniden aktif hale gelecektir." : "Kullanıcının tüm portföyleri pasife alınır ve sisteme girişi engellenir.";
             chkLabel.innerText = "İşlemin sonuçlarını anladım.";
             btn.innerText = "Durumu Güncelle";
         } else {
             form.action = `/admin/users/hard-delete/${userId}`;
             title.innerText = "Üyeyi Kalıcı Olarak Sil";
-            warn.innerText = "DİKKAT: Kullanıcının tüm kayıtları silinir ve geri alınamaz!";
-            chkLabel.innerText = "Kalıcı silineceğini anladım.";
+            warn.innerText = "DİKKAT: Kullanıcının portföyleri, tescilleri ve sistemdeki tüm verileri geri dönüşü olmayacak şekilde silinecektir!";
+            chkLabel.innerText = "Kalıcı olarak silineceğini anladım.";
             btn.innerText = "Üyeyi Kalıcı Olarak Sil";
         }
 

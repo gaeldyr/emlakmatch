@@ -1,11 +1,13 @@
 import uuid
 import secrets
 import string
+import random
 from fastapi import APIRouter, Request, Form, Response, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from app.database import supabase
+from app.utils.mailer import send_verification_email
 
 router = APIRouter(tags=["Auth"])
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -104,7 +106,7 @@ def post_login(
 def get_pending_approval(request: Request):
     return templates.TemplateResponse(request=request, name="auth/pending_approval.html")
 
-# ================= 3. ÇOK ADIMLI KAYIT OL (EMLAKÇI / ŞİRKET) =================
+# ================= 3. ÇOK ADIMLI KAYIT OL (E-POSTA KODU GÖNDEREN AŞAMA) =================
 @router.get("/register", response_class=HTMLResponse)
 def get_register(request: Request, type: str = "agent"):
     return templates.TemplateResponse(
@@ -235,15 +237,14 @@ async def post_register(
             except Exception as e_bg:
                 print(f"[BELGE YÜKLEME HATASI]: {e_bg}")
 
-        # 4. Etiketler
+        # 4. Etiketler ve Kayıt Paketi
         districts_list = [d.strip() for d in calistigi_ilceler.split(",") if d.strip()]
         specialties_list = [s.strip() for s in uzmanlik_alanlari.split(",") if s.strip()]
 
         user_role = "developer" if is_company else "agent"
         assigned_firma_tipi = "sirket" if is_company else "emlakci"
 
-        # 5. Kullanıcıyı Kaydet
-        user_payload = {
+        pending_payload = {
             "ad_soyad": ad_soyad,
             "eposta": clean_email,
             "telefon": telefon.strip(),
@@ -257,15 +258,82 @@ async def post_register(
             "profil_foto": avatar_url,
             "durum": "onay_bekliyor",
             "rol": user_role,
-            "firma_tipi": assigned_firma_tipi
+            "firma_tipi": assigned_firma_tipi,
+            "invite_record_id": invite_record_id,
+            "inviter_id": inviter_id
         }
 
-        user_res = supabase.table("users").insert(user_payload).execute()
+        # 5. 6 Haneli Doğrulama Kodu Üret ve Gönder
+        verification_code = str(random.randint(100000, 999999))
+        
+        # Eski bekleyen kod varsa temizle
+        supabase.table("email_verifications").delete().eq("eposta", clean_email).execute()
+
+        # Doğrulama tablosuna geçici paketi kaydet
+        supabase.table("email_verifications").insert({
+            "eposta": clean_email,
+            "kod": verification_code,
+            "kayit_verisi": pending_payload
+        }).execute()
+
+        # E-posta servisini tetikle
+        send_verification_email(clean_email, verification_code)
+
+        # Doğrulama ekranını aç
+        return templates.TemplateResponse(
+            request=request,
+            name="auth/verify_email.html",
+            context={"email": clean_email}
+        )
+
+    except Exception as e:
+        return templates.TemplateResponse(
+            request=request, 
+            name="auth/register.html", 
+            context={
+                "error": f"Kayıt işlemi başarısız: {str(e)}",
+                "register_type": "company" if is_company else "agent"
+            }
+        )
+
+# ================= 4. E-POSTA DOĞRULAMA KODU ONAYLAMA =================
+@router.post("/auth/verify-email")
+def post_verify_email(
+    request: Request,
+    email: str = Form(...),
+    code: str = Form(...)
+):
+    clean_email = email.strip().lower()
+    clean_code = code.strip()
+
+    try:
+        chk = supabase.table("email_verifications").select("*").eq("eposta", clean_email).execute()
+        if not chk.data:
+            return templates.TemplateResponse(
+                request=request, 
+                name="auth/verify_email.html", 
+                context={"email": clean_email, "error": "Doğrulama oturumu bulunamadı, lütfen yeniden kayıt olun."}
+            )
+
+        record = chk.data[0]
+        if record.get("kod") != clean_code:
+            return templates.TemplateResponse(
+                request=request, 
+                name="auth/verify_email.html", 
+                context={"email": clean_email, "error": "Hatalı doğrulama kodu girdiniz."}
+            )
+
+        payload = record.get("kayit_verisi") or {}
+        invite_record_id = payload.pop("invite_record_id", None)
+        inviter_id = payload.pop("inviter_id", None)
+
+        # Kullanıcıyı kalıcı olarak users tablosuna kaydet
+        user_res = supabase.table("users").insert(payload).execute()
         new_user = user_res.data[0]
         new_user_id = new_user["id"]
 
-        # 6. Emlakçı ise Davet Kodu ve Network Bağlantısını Tamamla
-        if not is_company:
+        # Emlakçı ise davet kodunu tüket ve 5 yeni davet kodu tanımla
+        if payload.get("firma_tipi") == "emlakci":
             if invite_record_id:
                 supabase.table("invitation_codes").update({
                     "kullanildi": True,
@@ -284,16 +352,16 @@ async def post_register(
             new_codes = [{"olusturan_id": new_user_id, "kod": generate_invite_code()} for _ in range(5)]
             supabase.table("invitation_codes").insert(new_codes).execute()
 
+        # Doğrulama tablosundan geçici kaydı kaldır
+        supabase.table("email_verifications").delete().eq("eposta", clean_email).execute()
+
         return RedirectResponse(url="/auth/pending-approval", status_code=303)
 
     except Exception as e:
         return templates.TemplateResponse(
             request=request, 
-            name="auth/register.html", 
-            context={
-                "error": f"Kayıt işlemi başarısız: {str(e)}",
-                "register_type": "company" if is_company else "agent"
-            }
+            name="auth/verify_email.html", 
+            context={"email": clean_email, "error": f"Onaylama hatası: {str(e)}"}
         )
 
 # ================= ÇIKIŞ YAP =================

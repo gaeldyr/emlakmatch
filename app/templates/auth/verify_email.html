@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}E-Posta Doğrulama | EMLAKMATCH{% endblock %}
+
+{% block bottom_nav %}{% endblock %}
+
+{% block content %}
+<style>
+    main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+</style>
+
+<div class="min-h-screen w-full flex items-center justify-center bg-[#0A0F11] text-slate-100 font-sans p-4 selection:bg-emerald-500 selection:text-white relative overflow-hidden">
+    
+    <div class="w-full max-w-md bg-[#121A1D] border border-white/[0.08] rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative z-10 text-center">
+        
+        <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-2xl shadow-lg">
+            ✉️
+        </div>
+
+        <div class="space-y-1.5">
+            <h2 class="text-xl font-black text-white">E-Postanızı Doğrulayın</h2>
+            <p class="text-xs text-slate-400 leading-relaxed">
+                <span class="font-bold text-white">{{ email }}</span> adresinize 6 haneli bir aktivasyon kodu gönderdik.
+            </p>
+        </div>
+
+        {% if error %}
+        <div class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold rounded-xl text-center">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/auth/verify-email" method="POST" class="space-y-4">
+            <input type="hidden" name="email" value="{{ email }}">
+
+            <div>
+                <input type="text" 
+                       name="code" 
+                       required 
+                       maxlength="6" 
+                       placeholder="• • • • • •" 
+                       autocomplete="one-time-code"
+                       class="w-full text-center tracking-[10px] text-2xl font-black py-3.5 bg-white/[0.04] border border-white/10 rounded-2xl text-emerald-400 placeholder-slate-600 focus:ring-2 focus:ring-emerald-500 focus:border-transparent focus:outline-none transition">
+            </div>
+
+            <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black py-3.5 rounded-xl text-xs tracking-wide transition shadow-lg shadow-emerald-950/60 active:scale-[0.99] cursor-pointer">
+                Kodu Doğrula ve Başvuruyu Tamamla
+            </button>
+        </form>
+
+        <div class="text-[11px] text-slate-500">
+            Kodu almadınız mı? Spam / İstenmeyen kutunuzu kontrol edin veya 
+            <a href="/register" class="text-emerald-400 font-bold hover:underline">yeniden deneyin</a>.
+        </div>
+    </div>
+</div>
+{% endblock %}
