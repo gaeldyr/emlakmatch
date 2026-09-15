@@ -3,7 +3,7 @@
 {% block title %}{{ other_user.ad_soyad or 'Sohbet' }} - EMLAKMATCH{% endblock %}
 
 {% block content %}
-<!-- Ana Kapsayıcı: is_blocked verisini HTML attribute olarak taşıyoruz -->
+<!-- Ana Kapsayıcı -->
 <div id="chatRoot" 
      data-current-user-id="{{ current_user_id }}"
      data-other-user-id="{{ other_user.id }}"
@@ -11,16 +11,16 @@
      data-is-blocked="{% if is_blocked %}true{% else %}false{% endif %}"
      class="max-w-md mx-auto h-[calc(100vh-100px)] flex flex-col justify-between bg-slate-50/50">
     
-    <!-- Üst Bar (Dinamik Geri Dönüşlü & Kurumsal Temalı) -->
+    <!-- Üst Bar -->
     <div class="flex items-center justify-between px-3 py-2.5 bg-white border-b border-slate-100 shrink-0 shadow-2xs">
         <div class="flex items-center gap-2.5 min-w-0">
-            <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='{% if collab_id %}/collaborations/detail/{{ collab_id }}{% else %}/messages{% endif %}';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+            <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='{% if collab_id %}/collaborations/detail/{{ collab_id }}{% else %}/messages{% endif %}';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition cursor-pointer">
                 <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5">
                     <path d="m15 18-6-6 6-6"/>
                 </svg>
             </button>
 
-            <!-- Avatar (Long-Press Aktif) -->
+            <!-- Avatar -->
             <div data-user-avatar 
                  data-user-id="{{ other_user.id }}" 
                  data-user-name="{{ other_user.ad_soyad }}" 
@@ -42,8 +42,11 @@
 
         {% if other_user.telefon and not is_blocked %}
         <a href="tel:{{ other_user.telefon }}" 
-           class="px-2.5 py-1.5 rounded-xl theme-bg-light theme-text-dark hover:opacity-90 active:scale-95 transition border theme-border-light text-[11px] font-bold flex items-center gap-1 shrink-0">
-            <span>📞</span> <span>Ara</span>
+           class="px-2.5 py-1.5 rounded-xl theme-bg-light theme-text-dark hover:opacity-90 active:scale-95 transition border theme-border-light text-[11px] font-bold flex items-center gap-1.5 shrink-0">
+            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            <span>Ara</span>
         </a>
         {% endif %}
     </div>
@@ -56,22 +59,24 @@
                     <div class="flex justify-end message-row" data-id="{{ msg.id }}">
                         <div class="max-w-[80%] theme-bg-primary text-white rounded-2xl rounded-tr-xs px-3.5 py-2 text-xs shadow-2xs space-y-0.5">
                             <p class="leading-relaxed break-words whitespace-pre-wrap">{{ msg.mesaj_metni }}</p>
-                            <div class="text-[9px] text-white/80 text-right time-label" data-utc="{{ msg.created_at }}"></div>
+                            <div class="text-[9px] text-white/80 text-right time-label" data-raw-time="{{ msg.created_at }}"></div>
                         </div>
                     </div>
                 {% else %}
                     <div class="flex justify-start message-row" data-id="{{ msg.id }}">
                         <div class="max-w-[80%] bg-white text-slate-800 border border-slate-200/80 rounded-2xl rounded-tl-xs px-3.5 py-2 text-xs shadow-2xs space-y-0.5">
                             <p class="leading-relaxed break-words whitespace-pre-wrap">{{ msg.mesaj_metni }}</p>
-                            <div class="text-[9px] text-slate-400 text-right time-label" data-utc="{{ msg.created_at }}"></div>
+                            <div class="text-[9px] text-slate-400 text-right time-label" data-raw-time="{{ msg.created_at }}"></div>
                         </div>
                     </div>
                 {% endif %}
             {% endfor %}
         {% else %}
             <div id="emptyPlaceholder" class="text-center py-16 px-4 space-y-2">
-                <div class="w-12 h-12 rounded-full theme-bg-light theme-text-dark flex items-center justify-center mx-auto text-xl border theme-border-light">
-                    💬
+                <div class="w-12 h-12 rounded-full theme-bg-light theme-text-dark flex items-center justify-center mx-auto border theme-border-light">
+                    <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
                 </div>
                 <p class="text-xs font-bold text-slate-700">Sohbet Başlatılmadı</p>
                 <p class="text-[11px] text-slate-400 max-w-xs mx-auto">
@@ -84,7 +89,7 @@
     <!-- Mesaj Alanı -->
     {% if is_blocked %}
         <div class="p-3.5 bg-rose-50 border-t border-rose-200 text-center text-rose-700 text-xs font-bold shrink-0 space-y-1">
-            <p>🚫 Bu kullanıcıyla aranızdaki iletişim engellenmiştir.</p>
+            <p>Bu kullanıcıyla aranızdaki iletişim engellenmiştir.</p>
             <p class="text-[10px] font-medium text-rose-600">Karşılıklı mesaj gönderimi ve işbirliği teklifleri kapatılmıştır.</p>
         </div>
     {% else %}
@@ -99,7 +104,7 @@
                 
                 <button type="submit" 
                         id="sendBtn"
-                        class="theme-bg-primary theme-hover-bg active:scale-95 text-white p-2.5 rounded-2xl transition shadow-xs shrink-0 flex items-center justify-center">
+                        class="theme-bg-primary theme-hover-bg active:scale-95 text-white p-2.5 rounded-2xl transition shadow-xs shrink-0 flex items-center justify-center cursor-pointer">
                     <svg class="w-4 h-4 fill-current rotate-90" viewBox="0 0 24 24">
                         <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                     </svg>
@@ -119,24 +124,41 @@
     const container = document.getElementById('messagesContainer');
     const input = document.getElementById('messageInput');
 
-    function formatTime(isoString) {
-        if (!isoString) return new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+    // Bilgisayarın yerel saatini garantiye alan kesin zaman biçimlendirici
+    function formatToLocalComputerTime(timeVal) {
+        if (!timeVal) {
+            const now = new Date();
+            return ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+        }
+
         try {
-            let dateStr = isoString;
-            if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
-                dateStr += 'Z';
+            // Eğer saat string içinde zaten HH:MM formatında geliyorsa ve tarih içermiyorsa
+            if (typeof timeVal === 'string' && timeVal.length === 5 && timeVal.includes(':')) {
+                return timeVal;
             }
-            const d = new Date(dateStr);
-            return d.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
-        } catch(e) {
-            return '';
+
+            let dateObj = new Date(timeVal);
+            
+            // Geçersiz tarih kontrolü
+            if (isNaN(dateObj.getTime())) {
+                const now = new Date();
+                return ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+            }
+
+            // Bilgisayarın yerel saatini al
+            const hours = ('0' + dateObj.getHours()).slice(-2);
+            const minutes = ('0' + dateObj.getMinutes()).slice(-2);
+            return `${hours}:${minutes}`;
+        } catch (e) {
+            const now = new Date();
+            return ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
         }
     }
 
     function localizeExistingTimes() {
         document.querySelectorAll('.time-label').forEach(el => {
-            const raw = el.getAttribute('data-utc');
-            if (raw) el.textContent = formatTime(raw);
+            const raw = el.getAttribute('data-raw-time');
+            el.textContent = formatToLocalComputerTime(raw);
         });
     }
 
@@ -166,7 +188,7 @@
         if (ph) ph.style.display = 'none';
 
         const tempId = 'temp-' + Date.now();
-        const localTimeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+        const currentLocalTime = formatToLocalComputerTime(null);
 
         const tempRow = document.createElement('div');
         tempRow.dataset.id = tempId;
@@ -174,7 +196,7 @@
         tempRow.innerHTML = `
             <div class="max-w-[80%] theme-bg-primary text-white rounded-2xl rounded-tr-xs px-3.5 py-2 text-xs shadow-2xs space-y-0.5">
                 <p class="leading-relaxed break-words whitespace-pre-wrap">${escapeHtml(text)}</p>
-                <div class="text-[9px] text-white/80 text-right">${localTimeStr}</div>
+                <div class="text-[9px] text-white/80 text-right">${currentLocalTime}</div>
             </div>
         `;
         container.appendChild(tempRow);
@@ -220,7 +242,7 @@
                     if (m.id && !existingIds.has(String(m.id))) {
                         hasNew = true;
                         const isMe = String(m.gonderen_id) === String(currentUserId);
-                        const time = formatTime(m.created_at);
+                        const timeStr = formatToLocalComputerTime(m.created_at);
                         
                         const row = document.createElement('div');
                         row.dataset.id = m.id;
@@ -228,7 +250,7 @@
                         row.innerHTML = `
                             <div class="max-w-[80%] ${isMe ? 'theme-bg-primary text-white rounded-tr-xs' : 'bg-white text-slate-800 border border-slate-200/80 rounded-tl-xs'} rounded-2xl px-3.5 py-2 text-xs shadow-2xs space-y-0.5">
                                 <p class="leading-relaxed break-words whitespace-pre-wrap">${escapeHtml(m.mesaj_metni)}</p>
-                                <div class="text-[9px] ${isMe ? 'text-white/80' : 'text-slate-400'} text-right">${time}</div>
+                                <div class="text-[9px] ${isMe ? 'text-white/80' : 'text-slate-400'} text-right">${timeStr}</div>
                             </div>
                         `;
                         container.appendChild(row);

@@ -24,24 +24,35 @@ def mask_phone_number(phone: str) -> str:
         return f"{prefix} XXX XX {suffix}"
     return "05XX XXX XX XX"
 
+from app.routers.portfolios import TURKEY_DISTRICTS
+
 # ================= 1. PROJE AĞI (TÜM PROJELER) =================
 @router.get("", response_class=HTMLResponse)
-def get_projects_catalog(request: Request, user_id: str = Cookie(None), ilce: str = None):
+def get_projects_catalog(request: Request, user_id: str = Cookie(None)):
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
-    query = supabase.table("projects").select("*, users:firma_id(sirket_unvani, ad_soyad, profil_foto)").eq("durum", "Aktif")
-    if ilce:
-        query = query.ilike("ilce", f"%{ilce.strip()}%")
-
-    projects = query.order("created_at", desc=True).execute().data or []
+    projects = []
+    try:
+        query = (
+            supabase.table("projects")
+            .select("*, users:firma_id(sirket_unvani, ad_soyad, profil_foto)")
+            .eq("durum", "Aktif")
+            .order("created_at", desc=True)
+        )
+        projects = query.execute().data or []
+    except Exception as e:
+        print(f"[PROJE KATALOG GETİRME HATASI]: {e}")
+        projects = []
 
     return templates.TemplateResponse(
         request=request,
         name="projects/catalog.html",
-        context={"projects": projects, "selected_ilce": ilce or ""}
+        context={
+            "projects": projects,
+            "turkey_data": TURKEY_DISTRICTS
+        }
     )
-
 # ================= 2. PROJE DETAY SAYFASI =================
 @router.get("/detail/{project_id}", response_class=HTMLResponse)
 def get_project_detail(request: Request, project_id: str, user_id: str = Cookie(None)):

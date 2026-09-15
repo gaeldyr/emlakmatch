@@ -21,6 +21,10 @@
     <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl flex items-center gap-2">
         <span>✕ Bu proje yayından kaldırıldığı (Pasif) için müşteri tescil durumu güncellenemez.</span>
     </div>
+    {% elif request.query_params.get('err') == 'already_completed' %}
+    <div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-2xl flex items-center gap-2">
+        <span>Satışı onaylanmış ve tamamlanmış bir tescilin durumu geriye alınamaz.</span>
+    </div>
     {% endif %}
 
     <!-- Tescil Kartları Listesi (Sayfalanmış) -->
@@ -28,6 +32,10 @@
         {% if registrations and registrations|length > 0 %}
             {% for r in registrations %}
             {% set is_project_inactive = (r.projects and r.projects.durum == 'Pasif') %}
+            {% set st = (r.durum or '')|lower %}
+            {% set is_sold = st in ['satış yapıldı', 'satis yapildi', 'tamamlandı'] %}
+            {% set active_status_label = 'Satış Yapılıyor' if st in ['rezervasyon', 'satış yapılıyor', 'satis yapiliyor'] else r.durum %}
+            
             <div class="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4 transition hover:border-slate-300 {% if is_project_inactive %}opacity-80{% endif %}">
                 
                 <div class="flex items-start justify-between border-b border-slate-100 pb-3">
@@ -43,14 +51,13 @@
                         </span>
                         {% endif %}
 
-                        {% set st = r.durum|lower %}
-                        {% if st in ['satış yapıldı', 'satis yapildi'] %}
-                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light">
-                                ✓ Satış Yapıldı
+                        {% if is_sold %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                <span>✓ Satış Yapıldı</span>
                             </span>
-                        {% elif st == 'rezervasyon' %}
+                        {% elif st in ['satış yapılıyor', 'satis yapiliyor', 'rezervasyon'] %}
                             <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200">
-                                Rezervasyon
+                                Satış Yapılıyor
                             </span>
                         {% elif st == 'yer gösterimi' %}
                             <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
@@ -59,6 +66,10 @@
                         {% elif st == 'görüşmede' %}
                             <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-200">
                                 Görüşmede
+                            </span>
+                        {% elif st == 'iptal edildi' %}
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-200">
+                                İptal Edildi
                             </span>
                         {% else %}
                             <span class="px-2.5 py-1 rounded-xl text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light">
@@ -90,20 +101,35 @@
 
                 <!-- Durum Güncelleme ve Buton Alanı -->
                 {% if not is_project_inactive %}
-                <div class="flex items-center justify-between pt-1">
-                    <span class="text-[11px] font-bold text-slate-500">Müşterinin görüşme ve süreç aşamasını güncelleyin:</span>
-                    
-                    <button type="button" 
-                            onclick="openRegistrationStatusDrawer('{{ r.id }}', '{{ r.musteri_ad_soyad }}', '{{ r.durum }}')"
-                            class="px-4 py-2 theme-bg-light hover:theme-bg-primary hover:text-white theme-text-dark border theme-border-light text-xs font-black rounded-xl transition shadow-2xs flex items-center gap-1.5 active:scale-95">
-                        <span>Aşamayı Değiştir: <strong>{{ r.durum }}</strong></span>
-                        <span class="text-xs">▾</span>
-                    </button>
-                </div>
+                    {% if is_sold %}
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 stroke-emerald-700" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <span>Bu satış başarıyla sonuçlandırılmış ve kilitlenmiştir. Aşaması değiştirilemez.</span>
+                        </span>
+                        <span class="px-3.5 py-1.5 bg-slate-100 text-slate-500 font-black text-xs rounded-xl border border-slate-200 cursor-not-allowed">
+                            Kilitli
+                        </span>
+                    </div>
+                    {% else %}
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="text-[11px] font-bold text-slate-500">Müşterinin görüşme ve süreç aşamasını güncelleyin:</span>
+                        
+                        <button type="button" 
+                                data-reg-id="{{ r.id }}"
+                                data-customer-name="{{ r.musteri_ad_soyad }}"
+                                data-current-status="{{ active_status_label }}"
+                                onclick="openRegistrationDrawerFromButton(this)"
+                                class="px-4 py-2 theme-bg-light hover:theme-bg-primary hover:text-white theme-text-dark border theme-border-light text-xs font-black rounded-xl transition shadow-2xs flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                            <span>Aşamayı Değiştir: <strong>{{ active_status_label }}</strong></span>
+                            <span class="text-xs">▾</span>
+                        </button>
+                    </div>
+                    {% endif %}
                 {% else %}
                 <div class="flex items-center justify-between pt-1 text-xs">
-                    <span class="text-[11px] font-bold text-amber-700 flex items-center gap-1">
-                        <span>⚠️ Bu proje yayından kaldırıldığı için müşteri tescil durumu güncellenemez.</span>
+                    <span class="text-[11px] font-bold text-amber-700">
+                        Bu proje yayından kaldırıldığı için müşteri tescil durumu güncellenemez.
                     </span>
                     <span class="text-[11px] font-mono text-slate-400 font-bold">Kilitli</span>
                 </div>
@@ -156,7 +182,7 @@
                 <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Tescil Durumu Güncelle</span>
                 <h3 id="drawerCustomerName" class="text-xs font-black text-slate-900 mt-0.5">Müşteri Adı</h3>
             </div>
-            <button type="button" onclick="closeRegistrationStatusDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold leading-none">✕</button>
+            <button type="button" onclick="closeRegistrationStatusDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold leading-none cursor-pointer">✕</button>
         </div>
 
         <form id="drawerStatusForm" action="/company/registrations/update-status" method="POST" class="space-y-3">
@@ -164,19 +190,24 @@
             <input type="hidden" name="yeni_durum" id="drawerNewStatusInput" value="">
 
             <div class="space-y-1.5" id="drawerStatusOptions">
-                {% for st_item in ["Doğrulandı", "Görüşmede", "Yer Gösterimi", "Rezervasyon", "Satış Yapıldı", "İptal Edildi"] %}
+                {% for st_item in ["Doğrulandı", "Görüşmede", "Yer Gösterimi", "Satış Yapılıyor", "İptal Edildi"] %}
                 <button type="button" 
                         data-status="{{ st_item }}"
                         onclick="selectRegistrationStatus('{{ st_item }}')"
-                        class="status-option-btn w-full p-3 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light hover:theme-border-light text-left transition flex items-center justify-between group">
+                        class="status-option-btn w-full p-3 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light hover:theme-border-light text-left transition flex items-center justify-between group cursor-pointer">
                     <span class="font-bold text-xs text-slate-800 group-hover:theme-text-dark">{{ st_item }}</span>
                     <span class="theme-text-dark opacity-0 group-hover:opacity-100 font-black text-sm transition">✓</span>
                 </button>
                 {% endfor %}
             </div>
 
-            <div class="pt-2">
-                <button type="submit" class="w-full py-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-2xl transition shadow-xs active:scale-95">
+            <!-- Satış Kapatma Bilgilendirmesi -->
+            <div class="p-3 bg-purple-50 border border-purple-200/80 rounded-2xl text-[11px] text-purple-950 font-medium leading-relaxed">
+                Nihai satışı kapatmak ve prim hesaplamak için müşteriyi <strong>Satış Yapılıyor</strong> aşamasına getirdikten sonra <strong>Satış Yönetimi</strong> ekranından bedel ve ünite girişi yapınız.
+            </div>
+
+            <div class="pt-1">
+                <button type="submit" class="w-full py-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-2xl transition shadow-xs active:scale-95 cursor-pointer">
                     Seçili Aşamayı Onayla & Kaydet
                 </button>
             </div>
@@ -185,6 +216,13 @@
 </div>
 
 <script>
+    function openRegistrationDrawerFromButton(btn) {
+        const regId = btn.getAttribute('data-reg-id');
+        const customerName = btn.getAttribute('data-customer-name');
+        const currentStatus = btn.getAttribute('data-current-status');
+        openRegistrationStatusDrawer(regId, customerName, currentStatus);
+    }
+
     function openRegistrationStatusDrawer(regId, customerName, currentStatus) {
         document.getElementById('drawerRegId').value = regId;
         document.getElementById('drawerCustomerName').innerText = customerName;
@@ -194,10 +232,10 @@
             const st = btn.getAttribute('data-status');
             const isMatch = (st.toLowerCase() === currentStatus.toLowerCase());
             if (isMatch) {
-                btn.className = 'status-option-btn w-full p-3 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between group shadow-2xs';
+                btn.className = 'status-option-btn w-full p-3 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between group shadow-2xs cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-dark opacity-100 font-black text-sm';
             } else {
-                btn.className = 'status-option-btn w-full p-3 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between group';
+                btn.className = 'status-option-btn w-full p-3 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between group cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-dark opacity-0 group-hover:opacity-100 font-black text-sm transition';
             }
         });
@@ -221,10 +259,10 @@
         document.querySelectorAll('.status-option-btn').forEach(btn => {
             const st = btn.getAttribute('data-status');
             if (st === statusName) {
-                btn.className = 'status-option-btn w-full p-3 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between group shadow-2xs';
+                btn.className = 'status-option-btn w-full p-3 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between group shadow-2xs cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-dark opacity-100 font-black text-sm';
             } else {
-                btn.className = 'status-option-btn w-full p-3 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between group';
+                btn.className = 'status-option-btn w-full p-3 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between group cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-dark opacity-0 group-hover:opacity-100 font-black text-sm transition';
             }
         });

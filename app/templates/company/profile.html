@@ -23,6 +23,14 @@
     <div class="p-4 theme-bg-light border theme-border-light theme-text-dark text-xs font-bold rounded-2xl shadow-2xs">
         ✓ Destek biletiniz EmlakMatch operasyon ekibine iletildi.
     </div>
+    {% elif err == 'pass_mismatch' %}
+    <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl shadow-2xs">
+        ✕ Girdiğiniz yeni şifreler birbiriyle eşleşmiyor.
+    </div>
+    {% elif err == 'wrong_old_pass' %}
+    <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl shadow-2xs">
+        ✕ Mevcut şifrenizi hatalı girdiniz.
+    </div>
     {% elif err %}
     <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl shadow-2xs">
         ✕ İşlem sırasında bir hata oluştu: {{ err }}
@@ -38,9 +46,9 @@
             <div class="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-2xs text-center space-y-4">
                 <div class="relative w-24 h-24 mx-auto rounded-3xl bg-slate-100 border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center">
                     {% if user and user.profil_foto %}
-                    <img src="{{ user.profil_foto }}" class="w-full h-full object-cover">
+                    <img id="profileCardLogoImg" src="{{ user.profil_foto }}" class="w-full h-full object-cover">
                     {% else %}
-                    <span class="text-3xl font-black theme-text-primary">{{ (user.sirket_unvani or 'Ş')[0]|upper }}</span>
+                    <span id="profileCardLogoInitial" class="text-3xl font-black theme-text-primary">{{ (user.sirket_unvani or 'Ş')[0]|upper }}</span>
                     {% endif %}
                 </div>
 
@@ -95,7 +103,7 @@
                 <div class="grid grid-cols-4 gap-2 pt-1" id="colorPaletteContainer"></div>
 
                 <div class="pt-2 text-center">
-                    <button type="button" onclick="resetDefaultTheme()" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition">
+                    <button type="button" onclick="resetDefaultTheme()" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition cursor-pointer">
                         Varsayılan Yeşile Sıfırla
                     </button>
                 </div>
@@ -125,13 +133,22 @@
                     <p class="text-xs text-slate-400 font-medium">Bu bilgiler danışmanların proje detayında ve kurumsal künyenizde görüntülenir.</p>
                 </div>
 
-                <!-- Özel Tasarım Logo Yükleme Bileşeni -->
+                <!-- Logo Yükleme Alanı & Canlı Önizleme -->
                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-4">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-800">Şirket Logosu Değiştir</label>
-                        <p class="text-[10px] text-slate-400">PNG veya JPG formatında kurumsal logo yükleyin.</p>
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div id="logoLivePreviewBox" class="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                            {% if user and user.profil_foto %}
+                            <img src="{{ user.profil_foto }}" class="w-full h-full object-cover">
+                            {% else %}
+                            <span class="text-xs font-black text-slate-400">Logo</span>
+                            {% endif %}
+                        </div>
+                        <div class="min-w-0">
+                            <label class="block text-[11px] font-bold text-slate-800">Şirket Logosu Değiştir</label>
+                            <p class="text-[10px] text-slate-400">PNG veya JPG formatında kurumsal logo yükleyin.</p>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 shrink-0">
                         <input type="file" 
                                id="companyLogoInput" 
                                name="profil_foto" 
@@ -142,10 +159,10 @@
                         <label for="companyLogoInput" 
                                class="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl theme-bg-primary theme-hover-bg text-white text-xs font-bold transition shadow-xs active:scale-95">
                             <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <span>Dosya Seç</span>
+                            <span>Logo Seç</span>
                         </label>
                         
-                        <span id="logoFileNameDisplay" class="text-xs text-slate-400 font-medium truncate max-w-[150px]">
+                        <span id="logoFileNameDisplay" class="text-xs text-slate-400 font-medium truncate max-w-[130px]">
                             Seçilmedi
                         </span>
                     </div>
@@ -154,32 +171,32 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Şirket Resmi Ticari Unvanı *</label>
-                        <input type="text" name="sirket_unvani" value="{{ user.sirket_unvani or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="text" name="sirket_unvani" value="{{ user.sirket_unvani or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Ticari Marka / Geliştirici Adı</label>
-                        <input type="text" name="marka_adi" value="{{ user.marka_adi or '' }}" placeholder="Örn: EMA Geliştirme" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="text" name="marka_adi" value="{{ user.marka_adi or '' }}" placeholder="Örn: EMA Geliştirme" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yetkili Adı Soyadı *</label>
-                        <input type="text" name="ad_soyad" value="{{ user.ad_soyad or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="text" name="ad_soyad" value="{{ user.ad_soyad or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yetkili Telefon *</label>
-                        <input type="tel" name="telefon" value="{{ user.telefon or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="tel" name="telefon" value="{{ user.telefon or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Merkez / Faaliyet Bölgesi</label>
-                    <input type="text" name="calisma_bolgesi" value="{{ user.calisma_bolgesi or '' }}" placeholder="Örn: İstanbul - Beşiktaş, Sarıyer, Beykoz" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    <input type="text" name="calisma_bolgesi" value="{{ user.calisma_bolgesi or '' }}" placeholder="Örn: İstanbul - Beşiktaş, Sarıyer, Beykoz" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                 </div>
 
                 <div class="pt-2 flex justify-end">
-                    <button type="submit" class="px-6 py-2.5 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                    <button type="submit" class="px-6 py-2.5 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95 cursor-pointer">
                         Kurumsal Bilgileri Kaydet
                     </button>
                 </div>
@@ -198,7 +215,7 @@
                             <span class="font-extrabold text-slate-900 block">Yeni Müşteri Tescil Bildirimleri</span>
                             <span class="text-[10px] text-slate-400 font-medium block">Bir danışman projenize alıcı yönlendirdiğinde anında bildirim alın.</span>
                         </div>
-                        <input type="checkbox" name="notify_collab" value="true" {% if settings.notify_collab %}checked{% endif %} class="w-4 h-4 rounded border-slate-300">
+                        <input type="checkbox" name="notify_collab" value="true" {% if settings.notify_collab %}checked{% endif %} class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                     </label>
 
                     <label class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition">
@@ -206,7 +223,7 @@
                             <span class="font-extrabold text-slate-900 block">Danışman Mesaj Bildirimleri</span>
                             <span class="text-[10px] text-slate-400 font-medium block">Partner brokerlar mesaj gönderdiğinde bildirim kutunuzda görüntüleyin.</span>
                         </div>
-                        <input type="checkbox" name="notify_messages" value="true" {% if settings.notify_messages %}checked{% endif %} class="w-4 h-4 rounded border-slate-300">
+                        <input type="checkbox" name="notify_messages" value="true" {% if settings.notify_messages %}checked{% endif %} class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                     </label>
 
                     <label class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition">
@@ -214,12 +231,12 @@
                             <span class="font-extrabold text-slate-900 block">Satış ve Rezervasyon Onay Bildirimleri</span>
                             <span class="text-[10px] text-slate-400 font-medium block">Kapatılan satış ve opsiyonlama işlemlerinin özet bildirimleri.</span>
                         </div>
-                        <input type="checkbox" name="notify_sales" value="true" {% if settings.notify_sales %}checked{% endif %} class="w-4 h-4 rounded border-slate-300">
+                        <input type="checkbox" name="notify_sales" value="true" {% if settings.notify_sales %}checked{% endif %} class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                     </label>
                 </div>
 
                 <div class="pt-2 flex justify-end">
-                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95 cursor-pointer">
                         Tercihleri Kaydet
                     </button>
                 </div>
@@ -235,20 +252,20 @@
                 <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Mevcut Şifre *</label>
-                        <input type="password" name="eski_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="password" name="eski_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yeni Şifre *</label>
-                        <input type="password" name="yeni_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="password" name="yeni_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yeni Şifre Tekrar *</label>
-                        <input type="password" name="yeni_sifre_tekrar" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="password" name="yeni_sifre_tekrar" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                 </div>
 
                 <div class="pt-2 flex justify-end">
-                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95 cursor-pointer">
                         Şifreyi Güncelle
                     </button>
                 </div>
@@ -267,14 +284,14 @@
                 <form action="/company/settings/support" method="POST" class="space-y-3 text-xs">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Konu Başlığı *</label>
-                        <input type="text" name="konu" required placeholder="Örn: Yeni Proje Broşür Yükleme Sorunu, Tescil İptali Hk." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="text" name="konu" required placeholder="Örn: Yeni Proje Broşür Yükleme Sorunu, Tescil İptali Hk." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Mesajınız / Talep Detayı *</label>
-                        <textarea name="mesaj" required rows="3" placeholder="Yaşadığınız durum hakkında detay veriniz..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:bg-white focus:outline-none leading-relaxed"></textarea>
+                        <textarea name="mesaj" required rows="3" placeholder="Yaşadığınız durum hakkında detay veriniz..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition leading-relaxed"></textarea>
                     </div>
                     <div class="flex justify-end">
-                        <button type="submit" class="px-5 py-2 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                        <button type="submit" class="px-5 py-2 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95 cursor-pointer">
                             Destek Talebini İlet
                         </button>
                     </div>
@@ -308,12 +325,23 @@
 <script>
     function handleLogoFileSelect(input) {
         const display = document.getElementById('logoFileNameDisplay');
-        if (input.files && input.files.length > 0) {
-            display.innerText = input.files[0].name;
-            display.className = 'text-xs font-bold text-slate-800 truncate max-w-[150px]';
+        const liveBox = document.getElementById('logoLivePreviewBox');
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            display.innerText = file.name;
+            display.className = 'text-xs font-bold text-slate-800 truncate max-w-[130px]';
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    liveBox.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+                };
+                reader.readAsDataURL(file);
+            }
         } else {
             display.innerText = 'Seçilmedi';
-            display.className = 'text-xs text-slate-400 font-medium truncate max-w-[150px]';
+            display.className = 'text-xs text-slate-400 font-medium truncate max-w-[130px]';
         }
     }
 
@@ -372,7 +400,7 @@
             btn.type = 'button';
             btn.title = t.name;
             btn.onclick = () => applyTheme(t);
-            btn.className = `h-9 rounded-xl flex items-center justify-center transition-all duration-150 transform hover:scale-105 ${isSelected ? 'ring-2 ring-slate-900 ring-offset-2 scale-105 shadow-sm' : 'border border-black/10'}`;
+            btn.className = `h-9 rounded-xl flex items-center justify-center transition-all duration-150 transform hover:scale-105 cursor-pointer ${isSelected ? 'ring-2 ring-slate-900 ring-offset-2 scale-105 shadow-sm' : 'border border-black/10'}`;
             btn.style.backgroundColor = t.primary;
 
             if (isSelected) {

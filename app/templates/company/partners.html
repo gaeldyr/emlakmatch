@@ -55,7 +55,10 @@
                                 <div class="min-w-0">
                                     <span class="text-xs font-black text-slate-900 block truncate">{{ agent_name }}</span>
                                     <span class="text-[11px] text-slate-400 font-semibold block truncate">{{ agent_office }}</span>
-                                    <span class="text-[10px] text-slate-500 font-mono mt-0.5 block">📞 {{ agent_phone }}</span>
+                                    <span class="text-[10px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
+                                        <svg class="w-3 h-3 stroke-slate-400" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                        <span>{{ agent_phone }}</span>
+                                    </span>
                                 </div>
                             </div>
                         </td>
@@ -82,32 +85,32 @@
                             </span>
                         </td>
 
-                        <!-- Partner Seviyesi (Dinamik Renkli Çekmece Tetikleyici) -->
+                        <!-- Partner Seviyesi -->
                         <td class="py-3.5 px-4 text-center">
                             <button type="button" 
                                     onclick="openLevelDrawer('{{ p.id }}', '{{ agent_name }}', '{{ p.partner_seviyesi }}', '{{ p.durum }}')"
-                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-black border transition shadow-2xs active:scale-95 {% if p.partner_seviyesi in ['Kurucu Ofis', 'VIP'] %}bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100{% else %}theme-bg-light theme-text-dark border theme-border-light hover:opacity-90{% endif %}">
+                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-black border transition shadow-2xs active:scale-95 cursor-pointer {% if p.partner_seviyesi in ['Kurucu Ofis', 'VIP'] %}bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100{% else %}theme-bg-light theme-text-dark border theme-border-light hover:opacity-90{% endif %}">
                                 <span>{{ p.partner_seviyesi }}</span>
                                 <span class="text-xs">▾</span>
                             </button>
                         </td>
 
-                        <!-- Durum (Dinamik Renkli Çekmece Tetikleyici) -->
+                        <!-- Durum -->
                         <td class="py-3.5 px-4 text-center">
                             <button type="button" 
                                     onclick="openStatusDrawer('{{ p.id }}', '{{ agent_name }}', '{{ p.durum }}', '{{ p.partner_seviyesi }}')"
-                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black border transition shadow-2xs active:scale-95 {% if p.durum == 'Aktif' %}theme-bg-light theme-text-dark border theme-border-light hover:opacity-90{% else %}bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100{% endif %}">
+                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black border transition shadow-2xs active:scale-95 cursor-pointer {% if p.durum == 'Aktif' %}theme-bg-light theme-text-dark border theme-border-light hover:opacity-90{% else %}bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100{% endif %}">
                                 <span>{{ p.durum }}</span>
                                 <span class="text-xs">▾</span>
                             </button>
                         </td>
 
-                        <!-- Aksiyonlar / Sayfa İçi Canlı Mesajlaşma Paneli -->
+                        <!-- Aksiyonlar / Mesajlaşma Paneli -->
                         <td class="py-3.5 px-4 text-right">
                             {% if p.users and p.users.id %}
                             <button type="button" 
                                     onclick="openChatFlyout('{{ p.users.id }}', '{{ agent_name }}', '{{ agent_office }}', '{{ agent_photo }}')"
-                                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-[11px] font-extrabold rounded-xl transition shadow-2xs active:scale-95">
+                                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-[11px] font-extrabold rounded-xl transition shadow-2xs active:scale-95 cursor-pointer">
                                 <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                                 <span>Mesaj İlet</span>
                             </button>
@@ -153,7 +156,7 @@
             <input type="hidden" name="partner_seviyesi" id="levelDrawerSelectedLevel">
 
             <div class="space-y-2" id="levelOptionsContainer">
-                <button type="button" data-level="Standart" onclick="selectLevelItem('Standart')" class="level-option-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between group">
+                <button type="button" data-level="Standart" onclick="selectLevelItem('Standart')" class="level-option-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between group cursor-pointer">
                     <div>
                         <span class="block font-black text-slate-900 group-hover:theme-text-dark">Standart Partner</span>
                         <span class="block text-[10px] text-slate-400 font-medium">Projenin standart partner komisyon oranını hak eder.</span>
@@ -161,7 +164,7 @@
                     <span class="theme-text-primary opacity-0 group-hover:opacity-100 font-black text-sm transition">✓</span>
                 </button>
 
-                <button type="button" data-level="Kurucu Ofis" onclick="selectLevelItem('Kurucu Ofis')" class="level-option-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-purple-50 hover:border-purple-300 text-left transition flex items-center justify-between group">
+                <button type="button" data-level="Kurucu Ofis" onclick="selectLevelItem('Kurucu Ofis')" class="level-option-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-purple-50 hover:border-purple-300 text-left transition flex items-center justify-between group cursor-pointer">
                     <div>
                         <span class="block font-black text-purple-900">Kurucu Ofis / VIP Partner</span>
                         <span class="block text-[10px] text-slate-400 font-medium">Projenin kurucu ofislere özel taahhüt ettiği yüksek komisyonu hak eder.</span>
@@ -170,12 +173,12 @@
                 </button>
             </div>
 
-            <button type="submit" class="w-full py-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-2xl transition shadow-xs mt-2 active:scale-95">
+            <button type="submit" class="w-full py-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-2xl transition shadow-xs mt-2 active:scale-95 cursor-pointer">
                 Seviyeyi Kaydet
             </button>
         </form>
 
-        <button type="button" onclick="closeLevelDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition">
+        <button type="button" onclick="closeLevelDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition cursor-pointer">
             Vazgeç
         </button>
     </div>
@@ -201,7 +204,7 @@
             <input type="hidden" name="durum" id="statusDrawerSelectedStatus">
 
             <div class="space-y-2">
-                <button type="button" data-status="Aktif" onclick="selectStatusItem('Aktif')" class="partner-status-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light hover:theme-border-light text-left transition flex items-center justify-between group">
+                <button type="button" data-status="Aktif" onclick="selectStatusItem('Aktif')" class="partner-status-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light hover:theme-border-light text-left transition flex items-center justify-between group cursor-pointer">
                     <div>
                         <span class="block font-black theme-text-dark">Aktif İş Ortağı</span>
                         <span class="block text-[10px] text-slate-400 font-medium">Proje detaylarını inceler, müşterilerini kesintisiz tescil edebilir.</span>
@@ -209,7 +212,7 @@
                     <span class="theme-text-primary opacity-0 group-hover:opacity-100 font-black text-sm transition">✓</span>
                 </button>
 
-                <button type="button" data-status="Askıya Alındı" onclick="selectStatusItem('Askıya Alındı')" class="partner-status-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-300 text-left transition flex items-center justify-between group">
+                <button type="button" data-status="Askıya Alındı" onclick="selectStatusItem('Askıya Alındı')" class="partner-status-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-300 text-left transition flex items-center justify-between group cursor-pointer">
                     <div>
                         <span class="block font-black text-rose-900">Askıya Alındı / Pasif</span>
                         <span class="block text-[10px] text-slate-400 font-medium">Danışmanın bu projeye yeni müşteri kaydı açması durdurulur.</span>
@@ -218,18 +221,18 @@
                 </button>
             </div>
 
-            <button type="submit" class="w-full py-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-2xl transition shadow-xs mt-2 active:scale-95">
+            <button type="submit" class="w-full py-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-2xl transition shadow-xs mt-2 active:scale-95 cursor-pointer">
                 Durumu Güncelle
             </button>
         </form>
 
-        <button type="button" onclick="closeStatusDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition">
+        <button type="button" onclick="closeStatusDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition cursor-pointer">
             Vazgeç
         </button>
     </div>
 </div>
 
-<!-- ================= 3. SAĞDAN KAYARAK AÇILAN CANLI B2B MESAJLAŞMA KONSOLU (SLIDE-OVER) ================= -->
+<!-- ================= 3. SAĞDAN KAYARAK AÇILAN CANLI B2B MESAJLAŞMA KONSOLU ================= -->
 <div id="chatFlyoutOverlay" onclick="closeChatFlyout()" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-2xs opacity-0 pointer-events-none transition-opacity duration-300"></div>
 
 <aside id="chatFlyout" class="fixed top-0 right-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col transform translate-x-full transition-transform duration-300">
@@ -246,7 +249,7 @@
             </div>
         </div>
 
-        <button type="button" onclick="closeChatFlyout()" class="w-8 h-8 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold flex items-center justify-center transition">
+        <button type="button" onclick="closeChatFlyout()" class="w-8 h-8 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold flex items-center justify-center transition cursor-pointer">
             ✕
         </button>
     </div>
@@ -268,7 +271,7 @@
                    placeholder="Danışmana mesajınızı yazın..." 
                    class="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:theme-border-primary focus:bg-white transition">
             
-            <button type="submit" id="flyoutSendBtn" class="p-2.5 theme-bg-primary theme-hover-bg text-white rounded-xl transition shadow-xs active:scale-95 shrink-0">
+            <button type="submit" id="flyoutSendBtn" class="p-2.5 theme-bg-primary theme-hover-bg text-white rounded-xl transition shadow-xs active:scale-95 shrink-0 cursor-pointer">
                 <svg class="w-4 h-4 stroke-current rotate-90" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="19" x2="12" y2="5"></line>
                     <polyline points="5 12 12 5 19 12"></polyline>
@@ -280,9 +283,40 @@
 </aside>
 
 <script>
+    // Bilgisayarın yerel saat dilimine dönüştürücü
+    function formatToLocalComputerTime(rawTime) {
+        if (!rawTime) {
+            const now = new Date();
+            return ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+        }
+
+        try {
+            let dateStr = String(rawTime).trim();
+            // UTC olduğunu tarayıcıya açıkça bildirmek için 'Z' veya zaman dilimi bilgisi yoksa ekle
+            if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
+                dateStr += 'Z';
+            } else if (!dateStr.endsWith('Z') && dateStr.length === 19) {
+                dateStr += 'Z';
+            }
+
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) {
+                const now = new Date();
+                return ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+            }
+
+            const hours = ('0' + d.getHours()).slice(-2);
+            const minutes = ('0' + d.getMinutes()).slice(-2);
+            return `${hours}:${minutes}`;
+        } catch (e) {
+            const now = new Date();
+            return ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+        }
+    }
+
     // 1. Seviye Çekmecesi
     function openLevelDrawer(partnerId, partnerName, currentLevel, currentStatus) {
-        document.getElementById('drawerLevelPartnerId').value = partnerId;
+        document.getElementById('levelDrawerPartnerId').value = partnerId;
         document.getElementById('levelDrawerPartnerName').innerText = partnerName;
         document.getElementById('levelDrawerCurrentStatus').value = currentStatus;
         document.getElementById('levelDrawerSelectedLevel').value = currentLevel;
@@ -290,10 +324,10 @@
         document.querySelectorAll('.level-option-btn').forEach(btn => {
             const isMatch = (btn.getAttribute('data-level') === currentLevel);
             if (isMatch) {
-                btn.className = 'level-option-btn w-full p-3.5 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between shadow-2xs';
+                btn.className = 'level-option-btn w-full p-3.5 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between shadow-2xs cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-primary opacity-100 font-black text-sm';
             } else {
-                btn.className = 'level-option-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between';
+                btn.className = 'level-option-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-primary opacity-0 font-black text-sm';
             }
         });
@@ -312,10 +346,10 @@
         document.querySelectorAll('.level-option-btn').forEach(btn => {
             const isMatch = (btn.getAttribute('data-level') === level);
             if (isMatch) {
-                btn.className = 'level-option-btn w-full p-3.5 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between shadow-2xs';
+                btn.className = 'level-option-btn w-full p-3.5 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between shadow-2xs cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-primary opacity-100 font-black text-sm';
             } else {
-                btn.className = 'level-option-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between';
+                btn.className = 'level-option-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-primary opacity-0 font-black text-sm';
             }
         });
@@ -332,10 +366,10 @@
         document.querySelectorAll('.partner-status-btn').forEach(btn => {
             const isMatch = (btn.getAttribute('data-status') === currentStatus);
             if (isMatch) {
-                btn.className = 'partner-status-btn w-full p-3.5 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between shadow-2xs';
+                btn.className = 'partner-status-btn w-full p-3.5 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between shadow-2xs cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-primary opacity-100 font-black text-sm';
             } else {
-                btn.className = 'partner-status-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between';
+                btn.className = 'partner-status-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-primary opacity-0 font-black text-sm';
             }
         });
@@ -354,17 +388,17 @@
         document.querySelectorAll('.partner-status-btn').forEach(btn => {
             const isMatch = (btn.getAttribute('data-status') === status);
             if (isMatch) {
-                btn.className = 'partner-status-btn w-full p-3.5 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between shadow-2xs';
+                btn.className = 'partner-status-btn w-full p-3.5 rounded-2xl border-2 theme-border-primary theme-bg-light text-left transition flex items-center justify-between shadow-2xs cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-primary opacity-100 font-black text-sm';
             } else {
-                btn.className = 'partner-status-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between';
+                btn.className = 'partner-status-btn w-full p-3.5 rounded-2xl border border-slate-200 bg-white hover:theme-bg-light text-left transition flex items-center justify-between cursor-pointer';
                 btn.querySelector('span:last-child').className = 'theme-text-primary opacity-0 font-black text-sm';
             }
         });
         document.getElementById('statusUpdateForm').submit();
     }
 
-    // 3. Canlı Mesajlaşma Konsolu (Slide-over Flyout)
+    // 3. Canlı Mesajlaşma Konsolu
     let chatPollInterval = null;
     let activeChatUserId = null;
 
@@ -409,7 +443,6 @@
     async function loadFlyoutMessages(userId) {
         const list = document.getElementById('flyoutMessagesList');
         list.innerHTML = '<div class="py-12 text-center text-slate-400 font-semibold text-[11px]">Mesajlar yükleniyor...</div>';
-        
         await pollFlyoutMessages(userId, true);
     }
 
@@ -431,13 +464,13 @@
             let html = '';
             msgs.forEach(m => {
                 const isMe = (m.gonderen_id === myId);
-                const timeStr = m.created_at ? m.created_at.substring(11, 16) : '';
+                const timeStr = formatToLocalComputerTime(m.created_at);
                 
                 if (isMe) {
                     html += `
                     <div class="flex flex-col items-end">
                         <div class="theme-bg-primary text-white rounded-2xl rounded-tr-xs px-3.5 py-2 max-w-[80%] shadow-xs leading-relaxed break-words">
-                            ${m.mesaj_metni}
+                            ${escapeHtml(m.mesaj_metni)}
                         </div>
                         <span class="text-[9px] text-slate-400 mt-1 font-mono">${timeStr}</span>
                     </div>`;
@@ -445,7 +478,7 @@
                     html += `
                     <div class="flex flex-col items-start">
                         <div class="bg-white border border-slate-200 text-slate-900 rounded-2xl rounded-tl-xs px-3.5 py-2 max-w-[80%] shadow-xs leading-relaxed break-words">
-                            ${m.mesaj_metni}
+                            ${escapeHtml(m.mesaj_metni)}
                         </div>
                         <span class="text-[9px] text-slate-400 mt-1 font-mono">${timeStr}</span>
                     </div>`;
@@ -488,6 +521,12 @@
         } catch(err) {
             console.error("Mesaj iletilemedi:", err);
         }
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/[&<>"']/g, function(m) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[m];
+        });
     }
 </script>
 {% endblock %}

@@ -365,13 +365,21 @@ def post_approve_success(collab_id: str, user_id: str = Cookie(None)):
         if not collab:
             return RedirectResponse(url="/collaborations/my", status_code=303)
 
-        is_sender = (str(collab.get("talep_gonderen_id")).strip() == clean_user_id)
+        durum_current = str(collab.get("durum") or "").strip().lower()
+        if durum_current in ["tamamlandı", "başarısız", "reddedildi", "iptal edildi"]:
+            return RedirectResponse(url=f"/collaborations/detail/{clean_collab_id}", status_code=303)
+
+        sender_id = str(collab.get("talep_gonderen_id") or "").strip()
+        receiver_id = str(collab.get("talep_alan_id") or "").strip()
+        is_sender = (sender_id == clean_user_id)
+
+        # Karşı tarafın onayı var mı?
         other_approved = bool(
             (collab.get("talep_alan_onay") or collab.get("alan_onay"))
             if is_sender
             else (collab.get("talep_gonderen_onay") or collab.get("gonderen_onay"))
         )
-        other_id = str(collab.get("talep_alan_id") if is_sender else collab.get("talep_gonderen_id")).strip()
+        other_id = receiver_id if is_sender else sender_id
 
         user_info = supabase.table("users").select("ad_soyad").eq("id", clean_user_id).single().execute()
         my_name = user_info.data.get("ad_soyad") if user_info.data else "Meslektaşınız"
@@ -395,27 +403,24 @@ def post_approve_success(collab_id: str, user_id: str = Cookie(None)):
                 except Exception as port_err:
                     print(f"[PORTFÖY KİLİTLEME HATASI]: {port_err}")
 
-            # BİLDİRİM 6: İşlem tamamlandığında iki tarafa teyit
             send_notification(
                 user_id=clean_user_id,
-                baslik="Satış Başarıyla Kapatıldı! 🏆",
-                icerik="Her iki tarafın teyidiyle ortak satış tamamlandı. Meslektaşınızı puanlayabilirsiniz.",
+                baslik="Satış Başarıyla Kapatıldı",
+                icerik="Her iki tarafın teyidiyle ortak satış tamamlandı. Meslektaşınızı değerlendirebilirsiniz.",
                 hedef_url=f"/collaborations/review/{clean_collab_id}"
             )
             send_notification(
                 user_id=other_id,
-                baslik="Satış Başarıyla Kapatıldı! 🏆",
-                icerik=f"{my_name} adlı meslektaşınızın da teyidiyle ortak satışınız başarıyla tamamlandı. Puanlama yapabilirsiniz.",
+                baslik="Satış Başarıyla Kapatıldı",
+                icerik=f"{my_name} adlı meslektaşınızın teyidiyle ortak satış tamamlandı. Değerlendirme yapabilirsiniz.",
                 hedef_url=f"/collaborations/review/{clean_collab_id}"
             )
-
         else:
             update_payload["durum"] = "basari_onayi_bekleniyor"
-            # BİLDİRİM 7: Diğer tarafa onay bekleme çağrısı
             send_notification(
                 user_id=other_id,
-                baslik="Satış Kapatma Onayınız Bekleniyor ⏳",
-                icerik=f"{my_name} adlı meslektaşınız satışı başarıyla tamamlandı olarak işaretledi. Lütfen işbirliği detayından onayınızı verin.",
+                baslik="Satış Kapatma Onayı Bekleniyor",
+                icerik=f"{my_name} adlı meslektaşınız satışı tamamlandı olarak işaretledi. Lütfen onayınızı verin.",
                 hedef_url=f"/collaborations/detail/{clean_collab_id}"
             )
 

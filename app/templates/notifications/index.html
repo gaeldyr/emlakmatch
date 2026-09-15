@@ -31,7 +31,31 @@
         {% if notifications and notifications|length > 0 %}
             {% for n in notifications %}
             {% set is_read = (n.okundu_mu if 'okundu_mu' in n else n.okundu) %}
-            <a href="{{ n.hedef_url or '/dashboard' }}" 
+            
+            {# 1. Veritabanındaki Olası Sütun İsimlerini Denetle #}
+            {% set raw_url = n.hedef_url or n.url or n.link or n.target_url %}
+            
+            {# 2. Eğer URL boşsa Bildirim Başlığı ve İçeriğine Göre Rota Üret #}
+            {% set title_lower = (n.baslik or '')|lower %}
+            {% set body_lower = (n.icerik or '')|lower %}
+            
+            {% if raw_url %}
+                {% set target_destination = raw_url %}
+            {% elif 'mesaj' in title_lower or 'mesaj' in body_lower %}
+                {% set target_destination = '/messages' %}
+            {% elif 'işbirliği' in title_lower or 'isbirligi' in title_lower or 'ortak satış' in title_lower %}
+                {% set target_destination = '/collaborations/my?tab=bekleyen' %}
+            {% elif 'tescil' in title_lower or 'proje' in title_lower %}
+                {% set target_destination = '/collaborations/my?subtab=projeler' %}
+            {% elif 'ağ' in title_lower or 'bağlantı' in title_lower or 'ofis' in title_lower %}
+                {% set target_destination = '/network' %}
+            {% elif 'değerlendirme' in title_lower or 'puan' in title_lower %}
+                {% set target_destination = '/profile' %}
+            {% else %}
+                {% set target_destination = '/dashboard' %}
+            {% endif %}
+
+            <a href="{{ target_destination }}" 
                class="notif-item block bg-white border rounded-3xl p-4 shadow-2xs hover:theme-border-primary transition duration-150 group {% if not is_read %}border-emerald-300 ring-2 ring-emerald-500/10{% else %}border-slate-200/90{% endif %}">
                 <div class="flex items-start gap-3">
                     <div class="w-9 h-9 rounded-2xl theme-bg-light theme-text-dark flex items-center justify-center shrink-0 border theme-border-light mt-0.5">
@@ -87,7 +111,6 @@
             const res = await fetch('/notifications/api/read-all', { method: 'POST' });
             const data = await res.json();
             if (data.success) {
-                // Kartlardaki yeşil halkaları ve noktaları temizle
                 document.querySelectorAll('.unread-dot').forEach(dot => dot.remove());
                 document.querySelectorAll('.notif-item').forEach(item => {
                     item.classList.remove('border-emerald-300', 'ring-2', 'ring-emerald-500/10');

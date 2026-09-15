@@ -55,32 +55,33 @@
                         </span>
 
                         {% if c.durum|lower == 'aktif' %}
-                            <span class="text-[10px] font-bold theme-bg-light theme-text-dark border theme-border-light px-2 py-0.5 rounded-md">
-                                ● Aktif Süreç
+                            <span class="text-[10px] font-bold theme-bg-light theme-text-dark border theme-border-light px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full theme-bg-primary"></span>
+                                Aktif Süreç
                             </span>
                         {% elif c.durum|lower == 'basari_onayi_bekleniyor' %}
                             <span class="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md">
-                                ⏳ Onay Bekliyor
+                                Onay Bekliyor
                             </span>
                         {% elif c.durum|lower == 'beklemede' %}
                             <span class="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md">
-                                ⏳ Yanıt Bekleniyor
+                                Yanıt Bekleniyor
                             </span>
                         {% elif c.durum|lower == 'reddedildi' %}
                             <span class="text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md">
-                                ✕ Reddedildi
+                                Reddedildi
                             </span>
                         {% elif c.durum|lower == 'iptal edildi' %}
                             <span class="text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md">
-                                ⊘ İptal Edildi
+                                İptal Edildi
                             </span>
                         {% elif c.durum|lower == 'başarısız' %}
                             <span class="text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md">
-                                ✕ Başarısız
+                                Başarısız
                             </span>
                         {% else %}
                             <span class="text-[10px] font-bold theme-bg-light theme-text-dark border theme-border-light px-2 py-0.5 rounded-md">
-                                ✓ Tamamlandı
+                                Tamamlandı
                             </span>
                         {% endif %}
                     </div>
@@ -102,7 +103,7 @@
                                 {{ c.other_agent }}
                             </h2>
                             <p class="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-                                📍 {{ c.portfolios.ilce or 'Bölge' }} / {{ c.portfolios.gayrimenkul_tipi or 'Mülk' }}
+                                {{ c.portfolios.ilce or 'Bölge' }} / {{ c.portfolios.gayrimenkul_tipi or 'Mülk' }}
                             </p>
                             <div class="flex items-center gap-2 mt-1">
                                 <span class="text-xs font-black theme-text-dark">
@@ -121,12 +122,12 @@
                                 <div class="grid grid-cols-2 gap-2">
                                     <form action="/collaborations/accept/{{ c.id }}" method="POST">
                                         <button type="submit" class="w-full py-2 theme-bg-primary theme-hover-bg text-white font-bold text-xs rounded-xl transition shadow-2xs active:scale-95">
-                                            ✓ Kabul Et
+                                            Kabul Et
                                         </button>
                                     </form>
                                     <form action="/collaborations/reject/{{ c.id }}" method="POST" onsubmit="return confirm('Bu işbirliği teklifini reddetmek istediğinize emin misiniz?');">
                                         <button type="submit" class="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl transition border border-rose-200 active:scale-95">
-                                            ✕ Reddet
+                                            Reddet
                                         </button>
                                     </form>
                                 </div>
@@ -137,11 +138,11 @@
                                             data-terms="{{ c.isbirligi_kosulu or '%50' }}" 
                                             onclick="openEditTermsModalFromButton(this)" 
                                             class="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded-xl transition border border-amber-200 active:scale-95">
-                                        ✏️ Şartı Düzenle
+                                        Şartı Düzenle
                                     </button>
                                     <form action="/collaborations/cancel/{{ c.id }}" method="POST" onsubmit="return confirm('Teklifinizi geri çekmek istediğinizden emin misiniz?');">
                                         <button type="submit" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition active:scale-95">
-                                            ⊘ İptal Et
+                                            İptal Et
                                         </button>
                                     </form>
                                 </div>
@@ -151,12 +152,12 @@
 
                     {% if tab == 'aktif' %}
                         <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                            <span class="text-[10px] theme-text-dark font-bold flex items-center gap-1">
+                            <span class="text-[10px] theme-text-dark font-bold flex items-center gap-1.5">
                                 <span class="w-2 h-2 rounded-full theme-bg-primary animate-pulse"></span>
                                 İletişim açık
                             </span>
                             <a href="/collaborations/detail/{{ c.id }}" class="theme-bg-primary theme-hover-bg text-white font-bold text-[11px] px-3.5 py-1.5 rounded-xl transition shadow-2xs">
-                                Yönet & İncele ›
+                                Yönet & İncele
                             </a>
                         </div>
                     {% endif %}
@@ -164,20 +165,21 @@
                     {% if tab == 'tamamlanan' %}
                         <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
                             <span class="text-[10px] text-slate-400 font-semibold">
-                                Durum: {{ c.kapatma_sebebi or 'Başarılı Satış' }}
+                                Durum: {{ c.kapatma_sebebi or 'Tamamlandı' }}
                             </span>
                             <div class="flex items-center gap-2">
                                 {% if c.has_reviewed %}
                                     <span class="px-2.5 py-1.5 theme-bg-light theme-text-dark border theme-border-light rounded-xl text-xs font-bold flex items-center gap-1">
-                                        <span>✓</span> Puanlandı
+                                        Değerlendirildi
                                     </span>
                                 {% else %}
-                                    <a href="/collaborations/review/{{ c.id }}" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-extrabold flex items-center gap-1 transition active:scale-95">
-                                        <span>⭐</span> Puanla
+                                    <a href="/collaborations/review/{{ c.id }}" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95">
+                                        <svg class="w-3.5 h-3.5 fill-amber-500 stroke-none" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                        <span>Değerlendir</span>
                                     </a>
                                 {% endif %}
                                 <a href="/collaborations/detail/{{ c.id }}" class="theme-text-primary hover:theme-text-dark text-xs font-bold">
-                                    Detayı Gör ›
+                                    Detayı Gör
                                 </a>
                             </div>
                         </div>
@@ -212,7 +214,7 @@
         </div>
     {% endif %}
 
-    <!-- ================= 2. GÖRÜNÜM: PROJE SATIŞ ORTAKLIKLARI (LONG-PRESS DESTEKLİ) ================= -->
+    <!-- ================= 2. GÖRÜNÜM: PROJE SATIŞ ORTAKLIKLARI ================= -->
     {% if subtab == 'projeler' %}
         <div class="space-y-3 pt-1">
             {% if project_registrations and project_registrations|length > 0 %}
@@ -236,7 +238,7 @@
                         {% set st = r.durum|lower %}
                         {% if st in ['satış yapıldı', 'satis yapildi'] %}
                             <span class="px-2.5 py-1 rounded-xl text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light">
-                                ✓ Satış Yapıldı
+                                Satış Yapıldı
                             </span>
                         {% elif st == 'rezervasyon' %}
                             <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200">
@@ -252,7 +254,7 @@
                             </span>
                         {% elif st == 'iptal edildi' %}
                             <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-200">
-                                ⊘ İptal Edildi
+                                İptal Edildi
                             </span>
                         {% else %}
                             <span class="px-2.5 py-1 rounded-xl text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light">
@@ -308,7 +310,7 @@
     {% endif %}
 </div>
 
-<!-- ================= PROJE TESCİLİ İŞLEM ÇEKMECESİ (BASILI TUTUNCA AÇILAN) ================= -->
+<!-- ================= PROJE TESCİLİ İŞLEM ÇEKMECESİ ================= -->
 <div id="regActionSheet" onclick="closeRegActionSheet()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center opacity-0 pointer-events-none transition-opacity duration-200">
     <div id="regActionContent" onclick="event.stopPropagation()" class="w-full max-w-md bg-white rounded-t-3xl p-5 space-y-3.5 shadow-2xl border-t theme-border-primary transform translate-y-full transition-transform duration-300">
         <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto mb-1"></div>
@@ -325,17 +327,17 @@
                     <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                     <span>Projenin Detaylarını İncele</span>
                 </span>
-                <span class="text-slate-400 text-sm">›</span>
+                <svg class="w-4 h-4 stroke-slate-400" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
             </a>
 
             <!-- 2. Tescili İptal Et -->
-            <form id="sheetCancelForm" method="POST" action="" onsubmit="return confirm('Bu müşteri tescilini ve 90 günlük koruma sürecini iptal etmek istediğinize emin misiniz?');">
+            <form id="sheetCancelForm" method="POST" action="" onsubmit="return confirm('Bu müşteri tescilini ve koruma sürecini iptal etmek istediğinize emin misiniz?');">
                 <button type="submit" id="sheetCancelBtn" class="w-full py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-2xl flex items-center justify-between transition border border-rose-200 font-bold active:scale-[0.98]">
                     <span class="flex items-center gap-2.5">
                         <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                        <span>Tescili / İşbirliğini İptal Et</span>
+                        <span>Tescili İptal Et</span>
                     </span>
-                    <span class="text-rose-400 text-sm">›</span>
+                    <svg class="w-4 h-4 stroke-rose-400" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
                 </button>
             </form>
         </div>
@@ -374,7 +376,6 @@
 </div>
 
 <script>
-    // 1. Proje Tescilleri için Long-Press & Action Sheet Mantığı
     let regTimer = null;
     let isRegLongPress = false;
 
@@ -385,7 +386,6 @@
         const projectName = card.getAttribute('data-project-name');
         const canCancel = card.getAttribute('data-can-cancel') === 'true';
 
-        // Mobilde Dokunma
         card.addEventListener('touchstart', () => {
             isRegLongPress = false;
             regTimer = setTimeout(() => {
@@ -400,7 +400,6 @@
             clearTimeout(regTimer);
             card.classList.remove('scale-95', 'ring-2', 'theme-border-primary');
             if (!isRegLongPress) {
-                // Kısa dokunmada da doğrudan detay açılabilir
                 window.location.href = `/projects/detail/${projectId}`;
             }
         });
@@ -410,7 +409,6 @@
             card.classList.remove('scale-95', 'ring-2', 'theme-border-primary');
         });
 
-        // Masaüstünde Tıklama & Basılı Tutma
         card.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
             isRegLongPress = false;
@@ -427,8 +425,6 @@
                 window.location.href = `/projects/detail/${projectId}`;
             }
         });
-
-        card.addEventListener('mouseleave', () => clearTimeout(regTimer));
     });
 
     function openRegActionSheet(regId, projectId, clientName, projectName, canCancel) {
@@ -436,14 +432,14 @@
         document.getElementById('sheetProjectName').innerText = projectName;
         document.getElementById('sheetViewProjectBtn').href = `/projects/detail/${projectId}`;
         
-        const cancelForm = document.getElementById('sheetCancelForm');
-        cancelForm.action = `/projects/cancel-registration/${regId}`;
+        const form = document.getElementById('sheetCancelForm');
+        form.action = `/projects/cancel-registration/${regId}`;
 
         const cancelBtn = document.getElementById('sheetCancelBtn');
-        if (canCancel) {
-            cancelForm.classList.remove('hidden');
+        if (!canCancel) {
+            cancelBtn.classList.add('hidden');
         } else {
-            cancelForm.classList.add('hidden');
+            cancelBtn.classList.remove('hidden');
         }
 
         const sheet = document.getElementById('regActionSheet');
@@ -459,13 +455,13 @@
         content.classList.add('translate-y-full');
     }
 
-    // 2. Şart Düzenleme Modal Fonksiyonları
     function openEditTermsModalFromButton(btn) {
         const collabId = btn.getAttribute('data-collab-id');
-        const currentTerms = btn.getAttribute('data-terms') || '%50';
-        const form = document.getElementById('editTermsForm');
-        form.action = `/collaborations/update-terms/${collabId}`;
+        const currentTerms = btn.getAttribute('data-terms');
+        
+        document.getElementById('editTermsForm').action = `/collaborations/update-terms/${collabId}`;
         document.getElementById('modalRateInput').value = currentTerms;
+
         const modal = document.getElementById('editTermsModal');
         const content = document.getElementById('editTermsContent');
         modal.classList.remove('opacity-0', 'pointer-events-none');
@@ -479,8 +475,8 @@
         content.classList.add('translate-y-full');
     }
 
-    function setModalRate(val) {
-        document.getElementById('modalRateInput').value = val;
+    function setModalRate(rate) {
+        document.getElementById('modalRateInput').value = rate;
     }
 </script>
 {% endblock %}

@@ -82,7 +82,7 @@ def get_company_dashboard(request: Request, user_id: str = Cookie(None)):
 
                 if st == "görüşmede":
                     meeting_customers_count += 1
-                elif st == "rezervasyon":
+                elif st in ["satış yapılıyor", "satis yapiliyor", "rezervasyon"]:
                     reservations_count += 1
                 elif st in ["satış yapıldı", "satis yapildi", "tamamlandı"]:
                     sales_count += 1
@@ -369,11 +369,26 @@ def post_update_registration_status(
         clean_reg_id = registration_id.strip()
         new_status = yeni_durum.strip()
 
-        reg_chk = supabase.table("project_customer_registrations").select(
-            "projects(durum)"
+        # Mevcut durumu sorgula
+        cur_reg = supabase.table("project_customer_registrations").select(
+            "durum, gerceklesen_satis_bedeli, projects(durum)"
         ).eq("id", clean_reg_id).single().execute()
 
-        if reg_chk.data and reg_chk.data.get("projects", {}).get("durum") == "Pasif":
+        if not cur_reg.data:
+            return RedirectResponse(url="/company/registrations", status_code=303)
+
+        current_st = str(cur_reg.data.get("durum") or "").strip().lower()
+
+        # KURAL 1: Zaten Satış Yapıldı ise başka aşamaya geri alınamaz
+        if current_st in ["satış yapıldı", "satis yapildi", "tamamlandı"]:
+            return RedirectResponse(url="/company/registrations?err=already_completed", status_code=303)
+
+        # KURAL 2: 'Satış Yapıldı' doğrudan buradan seçilemez; Satış Yönetimi sekmesinden kapatılmalıdır
+        if new_status.lower() in ["satış yapıldı", "satis yapildi"]:
+            return RedirectResponse(url="/company/sales?err=finalize_via_sales_tab", status_code=303)
+
+        # Proje pasifse işlem engeli
+        if cur_reg.data.get("projects", {}).get("durum") == "Pasif":
             return RedirectResponse(url="/company/registrations?err=project_inactive", status_code=303)
 
         supabase.table("project_customer_registrations").update({"durum": new_status}).eq("id", clean_reg_id).execute()
@@ -389,7 +404,7 @@ def post_update_registration_status(
 
             send_notification(
                 user_id=target_agent_id,
-                baslik="Müşteri Tescil Durumu Güncellendi ⏳",
+                baslik="Müşteri Tescil Durumu Güncellendi",
                 icerik=f"'{proje_adi}' projesindeki {musteri_adi} isimli müşterinizin yeni durumu: {new_status}.",
                 hedef_url="/collaborations/my?subtab=projeler"
             )
@@ -399,7 +414,7 @@ def post_update_registration_status(
     referer = request.headers.get("referer") or "/company/registrations"
     return RedirectResponse(url=referer, status_code=303)
 
-# ================= 5. ŞİRKET BİLDİRİMLERİ (GÜVENLİ VE ÇİFT ŞEMA DESTEKLİ) =================
+# ================= 5. ŞİRKET BİLDİRİMLERİ =================
 @router.get("/notifications", response_class=HTMLResponse)
 def get_company_notifications_page(request: Request, user_id: str = Cookie(None)):
     user = get_company_user(user_id)
@@ -412,7 +427,6 @@ def get_company_notifications_page(request: Request, user_id: str = Cookie(None)
         res = supabase.table("notifications").select("*").eq("user_id", clean_id).order("created_at", desc=True).execute()
         notifications = res.data or []
         
-        # Okundu yapmayı dene
         try:
             supabase.table("notifications").update({"okundu_mu": True}).eq("user_id", clean_id).execute()
         except Exception:
@@ -432,44 +446,6 @@ def get_company_notifications_page(request: Request, user_id: str = Cookie(None)
             "notifications": notifications
         }
     )
-
-@router.get("/api/notifications")
-def api_get_company_notifications(user_id: str = Cookie(None)):
-    user = get_company_user(user_id)
-    if not user:
-        return JSONResponse({"unread_count": 0, "notifications": []}, status_code=401)
-
-    clean_id = str(user["id"])
-    try:
-        res = supabase.table("notifications").select("*").eq("user_id", clean_id).order("created_at", desc=True).limit(8).execute()
-        all_notifs = res.data or []
-        
-        # Hem okundu_mu hem okundu kontrolü
-        unread_count = 0
-        for n in all_notifs:
-            is_read = n.get("okundu_mu") if "okundu_mu" in n else n.get("okundu", False)
-            if not is_read:
-                unread_count += 1
-                
-        return JSONResponse({"unread_count": unread_count, "notifications": all_notifs})
-    except Exception as e:
-        return JSONResponse({"unread_count": 0, "notifications": [], "error": str(e)})
-
-@router.post("/api/notifications/read-all")
-def api_mark_notifications_read(user_id: str = Cookie(None)):
-    user = get_company_user(user_id)
-    if not user:
-        return JSONResponse({"success": False}, status_code=401)
-
-    clean_id = str(user["id"])
-    try:
-        try:
-            supabase.table("notifications").update({"okundu_mu": True}).eq("user_id", clean_id).execute()
-        except Exception:
-            supabase.table("notifications").update({"okundu": True}).eq("user_id", clean_id).execute()
-        return JSONResponse({"success": True})
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)})
 
 # ================= 6. ŞİRKET PROFİLİ & AYARLAR =================
 @router.get("/profile", response_class=HTMLResponse)
@@ -534,6 +510,85 @@ def get_company_profile(request: Request, user_id: str = Cookie(None)):
             "err": request.query_params.get("err")
         }
     )
+
+# ================= ŞİRKET BİLGİLERİ VE LOGO GÜNCELLEME (POST) =================
+@router.post("/profile")
+@router.post("/profile/update")
+async def post_update_company_profile(
+    request: Request,
+    ad_soyad: str = Form(...),
+    telefon: str = Form(...),
+    sirket_unvani: str = Form(None),
+    marka_adi: str = Form(None),
+    calisma_bolgesi: str = Form(None),
+    profil_foto: UploadFile = File(None),
+    user_id: str = Cookie(None)
+):
+    user = get_company_user(user_id)
+    if not user:
+        return RedirectResponse(url="/login?type=company", status_code=303)
+
+    clean_id = str(user["id"])
+    update_data = {
+        "ad_soyad": ad_soyad.strip(),
+        "telefon": telefon.strip(),
+        "sirket_unvani": sirket_unvani.strip() if sirket_unvani else None,
+        "marka_adi": marka_adi.strip() if marka_adi else None,
+        "calisma_bolgesi": calisma_bolgesi.strip() if calisma_bolgesi else None
+    }
+
+    # Yeni logo/fotoğraf yüklendiyse Storage'a at ve URL'i kaydet
+    if profil_foto and profil_foto.filename:
+        try:
+            b_img = await profil_foto.read()
+            if len(b_img) > 0:
+                ext = profil_foto.filename.split(".")[-1].lower() if "." in profil_foto.filename else "jpg"
+                f_name = f"company_{clean_id}_{uuid.uuid4().hex[:6]}.{ext}"
+                supabase.storage.from_("portfolios").upload(
+                    path=f_name,
+                    file=b_img,
+                    file_options={"content-type": profil_foto.content_type or f"image/{ext}"}
+                )
+                update_data["profil_foto"] = supabase.storage.from_("portfolios").get_public_url(f_name)
+        except Exception as e_logo:
+            print(f"[ŞİRKET LOGO YÜKLEME HATASI]: {e_logo}")
+
+    try:
+        supabase.table("users").update(update_data).eq("id", clean_id).execute()
+        return RedirectResponse(url="/company/profile?msg=profile_updated", status_code=303)
+    except Exception as e:
+        print(f"[ŞİRKET PROFİL GÜNCELLEME HATASI]: {e}")
+        return RedirectResponse(url="/company/profile?err=profile_failed", status_code=303)
+
+# ================= ŞİRKET ŞİFRE DEĞİŞTİRME (POST) =================
+@router.post("/change-password")
+@router.post("/settings/change-password")
+def post_change_company_password(
+    request: Request,
+    eski_sifre: str = Form(...),
+    yeni_sifre: str = Form(...),
+    yeni_sifre_tekrar: str = Form(...),
+    user_id: str = Cookie(None)
+):
+    user = get_company_user(user_id)
+    if not user:
+        return RedirectResponse(url="/login?type=company", status_code=303)
+
+    clean_id = str(user["id"])
+
+    if yeni_sifre != yeni_sifre_tekrar:
+        return RedirectResponse(url="/company/profile?err=pass_mismatch", status_code=303)
+
+    try:
+        u_res = supabase.table("users").select("sifre").eq("id", clean_id).single().execute()
+        if not u_res.data or u_res.data.get("sifre") != eski_sifre:
+            return RedirectResponse(url="/company/profile?err=wrong_old_pass", status_code=303)
+
+        supabase.table("users").update({"sifre": yeni_sifre}).eq("id", clean_id).execute()
+        return RedirectResponse(url="/company/profile?msg=pass_updated", status_code=303)
+    except Exception as e:
+        print(f"[ŞİRKET ŞİFRE DEĞİŞTİRME HATASI]: {e}")
+        return RedirectResponse(url="/company/profile?err=pass_failed", status_code=303)
 
 @router.post("/settings/notifications")
 def post_update_company_notifications(
@@ -694,7 +749,7 @@ def get_company_sales(request: Request, user_id: str = Cookie(None)):
 
             for r in (reg_res.data or []):
                 st = str(r.get("durum") or "").strip().lower()
-                if st in ["satış yapıldı", "satis yapildi", "rezervasyon", "tamamlandı"]:
+                if st in ["satış yapıldı", "satis yapildi", "satış yapılıyor", "satis yapiliyor", "rezervasyon", "tamamlandı"]:
                     satis_fiyati = int(r.get("gerceklesen_satis_bedeli") or 0)
                     komisyon_tutari = int(r.get("hesaplanan_komisyon") or 0)
 
@@ -765,7 +820,7 @@ def post_finalize_sale(
 
             send_notification(
                 user_id=target_agent_id,
-                baslik="Satış Onaylandı & Komisyon Hak Edildi! 🏆",
+                baslik="Satış Onaylandı & Komisyon Hak Edildi",
                 icerik=f"'{proje_adi}' projesindeki {musteri_adi} isimli müşterinizin satışı onaylandı. Detayları işbirliklerimden inceleyebilirsiniz.",
                 hedef_url="/collaborations/my?subtab=projeler"
             )
@@ -958,7 +1013,7 @@ def post_add_campaign(
         for agent_id in target_agent_ids:
             send_notification(
                 user_id=agent_id,
-                baslik="Yeni Satış Kampanyası Başladı! 🚀",
+                baslik="Yeni Satış Kampanyası Başladı!",
                 icerik=notif_msg,
                 hedef_url=f"/projects/detail/{clean_pid}"
             )
