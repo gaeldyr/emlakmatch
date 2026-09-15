@@ -124,7 +124,43 @@ def get_my_portfolios(request: Request, user_id: str = Cookie(None)):
         context={"portfolios": portfolios}
     )
 
-# ================= 2. PORTFÖY EKLEME (ORTAK SATIŞ PRENSİBİ & GÖRÜNÜRLÜK) =================
+# ================= 2. PORTFÖY DETAY SAYFASI =================
+@router.get("/detail/{portfolio_id}", response_class=HTMLResponse)
+def get_portfolio_detail(request: Request, portfolio_id: str, user_id: str = Cookie(None)):
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    clean_user_id = str(user_id).strip()
+    clean_port_id = str(portfolio_id).strip()
+
+    try:
+        p_res = (
+            supabase.table("portfolios")
+            .select("*, users:porfoy_sahibi_id(id, ad_soyad, telefon, eposta, sirket_unvani, profil_foto)")
+            .eq("id", clean_port_id)
+            .single()
+            .execute()
+        )
+        portfolio = p_res.data
+        if not portfolio:
+            return RedirectResponse(url="/portfolios/my", status_code=303)
+
+        is_owner = (str(portfolio.get("porfoy_sahibi_id")) == clean_user_id)
+    except Exception as e:
+        print(f"[PORTFOY DETAY HATASI]: {e}")
+        return RedirectResponse(url="/portfolios/my", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="portfolios/detail.html",
+        context={
+            "portfolio": portfolio,
+            "is_owner": is_owner,
+            "current_user_id": clean_user_id
+        }
+    )
+
+# ================= 3. PORTFÖY EKLEME =================
 @router.get("/add", response_class=HTMLResponse)
 def get_add_portfolio(request: Request, user_id: str = Cookie(None)):
     if not user_id:
@@ -147,7 +183,7 @@ async def post_add_portfolio(
     m2: int = Form(None),
     kisa_aciklama: str = Form(None),
     yetki_durumu: str = Form("Satış Yetkili"),
-    visibility: str = Form("network"), # network, group, private
+    visibility: str = Form("network"),
     fotograflar: List[UploadFile] = File([]),
     user_id: str = Cookie(None)
 ):
@@ -193,7 +229,7 @@ async def post_add_portfolio(
             "ana_fotograf": ana_foto,
             "fotograflar": uploaded_urls,
             "yetki_durumu": yetki_durumu,
-            "visibility": visibility,  # network, group, private
+            "visibility": visibility,
             "isbirliğine_acik": True,
             "durum": "Aktif"
         }
@@ -212,7 +248,7 @@ async def post_add_portfolio(
             context={"message": f"Hata: {str(e)}", "turkey_data": TURKEY_DISTRICTS}
         )
 
-# ================= 3. UYGUN EMLAKÇILARI GETİR (DİNAMİK KRİTER & GÖRÜNÜRLÜK KORUMALI) =================
+# ================= 4. UYGUN EMLAKÇILARI GETİR =================
 @router.get("/agents-for/{portfolio_id}", response_class=HTMLResponse)
 def get_matching_agents(
     request: Request,
@@ -225,7 +261,6 @@ def get_matching_agents(
     clean_user_id = str(user_id).strip()
 
     try:
-        # 1. Portföy Bilgisini Çek
         p_res = (
             supabase.table("portfolios")
             .select("*")
@@ -258,11 +293,9 @@ def get_matching_agents(
 
         port_rooms = parse_room_count(port_oda_str)
 
-        # Portföy sahibinin üye olduğu grup kimlikleri (Group görünürlük denetimi için)
         my_gm = supabase.table("group_members").select("group_id").eq("user_id", clean_user_id).execute()
         my_group_ids = {str(item["group_id"]) for item in (my_gm.data or []) if item.get("group_id")}
 
-        # 2. Aktif Meslektaşları Al
         u_res = (
             supabase.table("users")
             .select("id, ad_soyad, eposta, telefon, sirket_unvani, profil_foto, calistigi_ilceler, uzmanlik_alanlari")
@@ -272,30 +305,27 @@ def get_matching_agents(
         )
         all_agents = u_res.data or []
 
-        # 3. İlgili İlçedeki Talepleri Çek (Private OLANLAR HARİÇ)
         d_res = (
             supabase.table("buyer_demands")
             .select("*")
             .eq("durum", "Aktif")
-            .neq("visibility", "private") # Gizli alıcı talepleri eşleşmeye dahil edilmez
+            .neq("visibility", "private")
             .ilike("ilce", f"%{port_ilce}%")
             .execute()
         )
         demands = d_res.data or []
 
-        # Danışmanların taleplerini eşleştir (Group görünürlüğü kuralı ile)
         user_demands_map = {}
         for d in demands:
             uid = str(d.get("user_id")).strip()
             d_vis = str(d.get("visibility") or "network").lower()
 
-            # Eğer talep 'group' ise ortak grup şartı aranır
             if d_vis == "group":
                 try:
                     d_owner_gm = supabase.table("group_members").select("group_id").eq("user_id", uid).execute()
                     d_owner_groups = {str(item["group_id"]) for item in (d_owner_gm.data or []) if item.get("group_id")}
                     if not my_group_ids.intersection(d_owner_groups):
-                        continue # Ortak grup yoksa bu talep elenir
+                        continue
                 except Exception:
                     continue
 
@@ -327,14 +357,12 @@ def get_matching_agents(
                 for dem in agent_demands:
                     current_base_score = 0
 
-                    # A. Lokasyon (30 / 20)
                     dem_mahalle = str(dem.get("mahalle_site") or "").strip().lower()
                     if port_mahalle and dem_mahalle and (port_mahalle in dem_mahalle or dem_mahalle in port_mahalle):
                         current_base_score += 30
                     else:
                         current_base_score += 20
 
-                    # B. Oda Sayısı (10)
                     dem_oda_str = str(dem.get("oda_sayisi") or "").strip().lower()
                     dem_rooms = parse_room_count(dem_oda_str)
                     if dem_rooms > 0:
@@ -343,7 +371,6 @@ def get_matching_agents(
                     else:
                         current_base_score += 5
 
-                    # C. Bütçe (10)
                     min_b = int(dem.get("min_butce") or 0)
                     max_b = int(dem.get("max_butce") or 0)
                     if port_price > 0:
@@ -362,7 +389,6 @@ def get_matching_agents(
                     else:
                         current_base_score += 5
 
-                    # D. 40 Nitelik & Donatı Dağılımı
                     raw_dem_features = dem.get("ozellikler") or []
                     if isinstance(raw_dem_features, str):
                         dem_features_list = [f.strip().lower() for f in raw_dem_features.split(",") if f.strip()]
@@ -390,7 +416,6 @@ def get_matching_agents(
                         best_score = final_score
                         b_max = round(max_b / 1_000_000, 1) if max_b > 0 else 0
                         best_demand_text = f"{b_max:g}M TL bütçeli hazır alıcısı ile %{final_score} uyumlu" if b_max > 0 else f"Hazır alıcısı ile %{final_score} kriter uyumu"
-
             else:
                 best_score = 50
                 best_demand_text = f"{portfolio.get('ilce', 'Bölge')} uzmanı danışman"
@@ -412,8 +437,7 @@ def get_matching_agents(
         context={"portfolio": portfolio, "agents": scored_agents}
     )
 
-
-# ================= 4. ORTAK SATIŞ TALEBİ GÖNDER (KOMİSYONSUZ) =================
+# ================= 5. ORTAK SATIŞ TALEBİ GÖNDER =================
 @router.post("/send-referral")
 def post_send_referral(
     request: Request,
@@ -437,7 +461,6 @@ def post_send_referral(
             "isbirligi_kosulu": "Ortak Satış (Hizmet Bedeli Taraflarca Alınır)",
             "durum": "Beklemede"
         }).execute()
-        print(f"[ORTAK SATIŞ OLUŞTURULDU]: {ins_res.data}")
 
         sender = supabase.table("users").select("ad_soyad").eq("id", clean_user_id).single().execute()
         s_name = sender.data.get("ad_soyad") if sender.data else "Bir meslektaşınız"
@@ -466,7 +489,7 @@ def post_send_referral(
         context={"portfolio": portfolio, "agent_name": agent_name}
     )
 
-# ================= 5. SİLME =================
+# ================= 6. SİLME =================
 @router.post("/delete/{portfolio_id}")
 def post_delete_portfolio(portfolio_id: str, user_id: str = Cookie(None)):
     if not user_id:
@@ -496,7 +519,7 @@ def post_delete_portfolio(portfolio_id: str, user_id: str = Cookie(None)):
 
     return RedirectResponse(url="/portfolios/my", status_code=303)
 
-# ================= 6. DURUM DEĞİŞTİRME =================
+# ================= 7. DURUM DEĞİŞTİRME =================
 @router.post("/toggle-status/{portfolio_id}")
 def post_toggle_status(portfolio_id: str, user_id: str = Cookie(None)):
     if not user_id:
@@ -519,7 +542,7 @@ def post_toggle_status(portfolio_id: str, user_id: str = Cookie(None)):
 
     return RedirectResponse(url="/portfolios/my", status_code=303)
 
-# ================= 7. DÜZENLEME =================
+# ================= 8. DÜZENLEME =================
 @router.get("/edit/{portfolio_id}", response_class=HTMLResponse)
 def get_edit_portfolio(request: Request, portfolio_id: str, user_id: str = Cookie(None)):
     if not user_id:

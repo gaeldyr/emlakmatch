@@ -1,169 +1,361 @@
 {% extends "base.html" %}
 
-{% block title %}Eşleşen Sonuçlar - EMLAKMATCH{% endblock %}
+{% block title %}Eşleşen Portföyler & Projeler - EMLAKMATCH{% endblock %}
 
 {% block content %}
-<div class="space-y-4 pb-16 max-w-md mx-auto">
-    <!-- Üst Bar (Dinamik Tarayıcı Geçmişine Dönen Geri Tuşu) -->
-    <div class="flex items-center justify-between pb-2 border-b border-slate-200/80 pt-1">
-        <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/demands/add';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
-            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
-        <h1 class="text-sm font-extrabold text-slate-900 tracking-tight">Eşleşen Sonuçlar</h1>
+<div class="space-y-4 pb-12 max-w-md mx-auto">
+    
+    <!-- Üst Başlık & Geri Dönüş -->
+    <div class="flex items-center justify-between pt-1 border-b border-slate-200/80 pb-2.5">
+        <a href="/demands/add" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+        </a>
+        <div class="text-center">
+            <h1 class="text-sm font-extrabold text-slate-900 tracking-tight">Eşleşen Portföy & Projeler</h1>
+            <p class="text-[10px] text-slate-400 font-semibold">{{ criteria.il }} / {{ criteria.ilce }} • {{ criteria.gayrimenkul_tipi }}</p>
+        </div>
         <div class="w-6"></div>
     </div>
 
-    <!-- Filtre Kriterleri Özeti -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between text-xs">
-        <div class="truncate pr-2">
-            <span class="font-extrabold text-slate-900 block truncate">{{ criteria.ilce }}, {{ criteria.il }} • {{ criteria.gayrimenkul_tipi }}</span>
-            <span class="text-[10px] text-slate-400 block mt-0.5 truncate">
-                Bütçe: {% if criteria.max_butce %}{{ '{:,}'.format(criteria.max_butce).replace(',', '.') }} TL'ye kadar{% else %}Sınırsız{% endif %}
-            </span>
+    <!-- İpucu Rozeti -->
+    <div class="p-2.5 bg-emerald-50/80 border border-emerald-200/70 rounded-2xl flex items-center gap-2 text-[11px] text-emerald-800 font-bold">
+        <span>💡</span>
+        <span>Görsellere basılı tutarak fotoğrafları tam ekran galeride inceleyebilirsiniz.</span>
+    </div>
+
+    <!-- 1. EMLAKÇI PORTFÖY EŞLEŞMELERİ -->
+    <div class="space-y-3">
+        <div class="flex items-center justify-between px-1">
+            <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full theme-bg-primary"></span>
+                <span>Meslektaş Portföyleri ({{ results|length }})</span>
+            </h2>
+            <span class="text-[10px] font-bold text-slate-400">%60+ Kriter Uyumu</span>
         </div>
-        <a href="/demands/add" class="text-[11px] font-bold theme-text-dark theme-bg-light px-2.5 py-1 rounded-xl border theme-border-light shrink-0">
-            Filtrele
-        </a>
-    </div>
 
-    <!-- SEKMELİ GEÇİŞ (PROJELER vs EMLAKÇI PORTFÖYLERİ) -->
-    <div class="grid grid-cols-2 p-1 theme-bg-light rounded-2xl border theme-border-light text-xs font-black text-center">
-        <button type="button" 
-                id="btnTabProjects" 
-                onclick="switchResultTab('projects')" 
-                class="py-2.5 rounded-xl transition-all duration-150 theme-bg-primary text-white shadow-sm">
-            Projeler ({{ project_results|length }})
-        </button>
-        <button type="button" 
-                id="btnTabPortfolios" 
-                onclick="switchResultTab('portfolios')" 
-                class="py-2.5 rounded-xl transition-all duration-150 theme-text-dark hover:bg-white/50">
-            Portföyler ({{ results|length }})
-        </button>
-    </div>
-
-    <!-- ================= 1. SEKME: SIFIR PROJELER ================= -->
-    <div id="sectionProjects" class="space-y-3 pt-1">
-        {% if project_results and project_results|length > 0 %}
-            {% for prj in project_results %}
-            <div class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-14 h-14 rounded-2xl bg-slate-100 overflow-hidden shrink-0 border border-slate-100 shadow-inner">
-                            <img src="{{ prj.kapak_fotografi or 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80' }}" class="w-full h-full object-cover">
-                        </div>
-                        <div class="min-w-0">
-                            <h3 class="text-xs font-black text-slate-900 truncate">{{ prj.ad }}</h3>
-                            <p class="text-[10px] text-slate-400 font-semibold truncate mt-0.5">
-                                {{ prj.users.sirket_unvani if prj.users else 'Proje Geliştirici' }} • 📍 {{ prj.ilce }}
-                            </p>
-                            <span class="inline-block text-[10px] font-black theme-text-dark mt-1">
-                                %{{ prj.partner_komisyon_orani }} Danışman Komisyonu
-                            </span>
-                        </div>
-                    </div>
-
-                    <span class="px-2 py-0.5 rounded-lg text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light shrink-0">
-                        %{{ prj.match_score }} Uyum
-                    </span>
-                </div>
-
-                <div class="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between text-xs">
-                    <div>
-                        <span class="text-[10px] text-slate-400 font-bold block">Fiyat Aralığı:</span>
-                        <span class="font-extrabold text-slate-800 text-[11px]">
-                            {{ '{:,}'.format(prj.min_fiyat).replace(',', '.') if prj.min_fiyat else '0' }} - {{ '{:,}'.format(prj.max_fiyat).replace(',', '.') if prj.max_fiyat else '0' }} TL
-                        </span>
-                    </div>
-                    {% if prj.matched_feature_count %}
-                    <span class="text-[10px] font-bold theme-text-dark bg-white px-2 py-1 rounded-xl border border-slate-200/80">
-                        ✓ {{ prj.matched_feature_count }} Donatı
-                    </span>
-                    {% endif %}
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
-                    <a href="/projects/detail/{{ prj.id }}" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95">
-                        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                        <span>Projeyi İncele</span>
-                    </a>
-
-                    <a href="/projects/{{ prj.id }}/register-client" class="w-full py-2.5 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs flex items-center justify-center gap-1.5 active:scale-95">
-                        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                        <span>Müşteri Tescil Et</span>
-                    </a>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="bg-white rounded-3xl border border-slate-200/90 p-8 text-center text-xs text-slate-400 space-y-1">
-                <p class="font-bold text-slate-700">Eşleşen Sıfır Proje Bulunamadı</p>
-                <p class="text-[11px]">Kriterlerinize uygun bir müteahhit projesi yayına girdiğinde bildirim alacaksınız.</p>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- ================= 2. SEKME: EMLAKÇI PORTFÖYLERİ ================= -->
-    <div id="sectionPortfolios" class="space-y-3 pt-1 hidden">
         {% if results and results|length > 0 %}
             {% for p in results %}
-            <div class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-14 h-14 rounded-2xl bg-slate-100 overflow-hidden shrink-0 border border-slate-100">
-                            <img src="{{ p.ana_fotograf or 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=300&q=80' }}" class="w-full h-full object-cover">
-                        </div>
-                        <div class="min-w-0">
-                            <h3 class="text-xs font-black text-slate-900 truncate">{{ p.gayrimenkul_tipi }} - {{ p.ilce }}</h3>
-                            <p class="text-[10px] text-slate-400 font-semibold truncate mt-0.5">
-                                Danışman: {{ p.users.ad_soyad if p.users else 'Meslektaş' }}
-                            </p>
-                            <span class="inline-block text-xs font-black theme-text-dark mt-1">
-                                {{ '{:,}'.format(p.fiyat).replace(',', '.') if p.fiyat else '0' }} TL
-                            </span>
-                        </div>
-                    </div>
-
-                    <span class="px-2 py-0.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-800 shrink-0">
-                        %{{ p.match_score }} Uyum
+            {% set all_photos = p.fotograflar if p.fotograflar else ([p.ana_fotograf] if p.ana_fotograf else []) %}
+            <div class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3 relative overflow-hidden transition-all duration-150 hover:shadow-md">
+                
+                <!-- Üst Eşleşme Skoru ve Fiyat -->
+                <div class="flex items-center justify-between">
+                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-black theme-bg-light theme-text-dark border theme-border-light flex items-center gap-1">
+                        <span>⚡ %{{ p.match_score }} Eşleşti</span>
+                    </span>
+                    <span class="text-xs font-black theme-text-dark">
+                        {{ '{:,}'.format(p.fiyat).replace(',', '.') if p.fiyat else '0' }} TL
                     </span>
                 </div>
 
-                <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <span class="text-[10px] text-slate-500 font-bold">{{ p.oda or '-' }} • {{ p.m2 or '-' }} m²</span>
-                    <a href="/messages/{{ p.users.id if p.users else '' }}" class="px-3.5 py-1.5 theme-bg-light hover:theme-bg-primary hover:text-white theme-text-dark text-[11px] font-black rounded-xl transition border theme-border-light active:scale-95">
-                        Mesaj Gönder ›
+                <!-- Görsel ve Basılı Tutma Alanı -->
+                <div class="relative w-full h-44 rounded-2xl overflow-hidden bg-slate-100 border border-slate-100 cursor-pointer group"
+                     data-quick-view
+                     data-title="{{ p.gayrimenkul_tipi }} - {{ p.ilce }}"
+                     data-price="{{ '{:,}'.format(p.fiyat).replace(',', '.') if p.fiyat else '0' }} TL"
+                     data-desc="{{ p.kisa_aciklama or '' }}"
+                     data-images='{{ all_photos|tojson }}'>
+                    
+                    <img src="{{ p.ana_fotograf or 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80' }}" 
+                         class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                    
+                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-black backdrop-blur-2xs">
+                        🔍 Basılı Tut / Tıkla (Fotoğrafları İncele)
+                    </div>
+
+                    <div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        <span>📷</span>
+                        <span>{{ all_photos|length }} Fotoğraf</span>
+                    </div>
+                </div>
+
+                <!-- Bilgi ve Lokasyon -->
+                <div>
+                    <h3 class="text-xs font-extrabold text-slate-900">{{ p.gayrimenkul_tipi }} - {{ p.ilce }} {% if p.mahalle_site %}({{ p.mahalle_site }}){% endif %}</h3>
+                    <div class="flex items-center gap-2 mt-1 text-[11px] text-slate-500 font-semibold">
+                        <span>{{ p.oda or '-' }}</span>
+                        <span>•</span>
+                        <span>{{ p.m2 or '-' }} m²</span>
+                        <span>•</span>
+                        <span class="text-emerald-700 font-bold">{{ p.yetki_durumu or 'Satış Yetkili' }}</span>
+                    </div>
+                </div>
+
+                <!-- Danışman Künyesi -->
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div class="flex items-center gap-2.5 truncate">
+                        <div class="w-8 h-8 rounded-xl theme-bg-light theme-text-dark font-black text-xs flex items-center justify-center shrink-0 border theme-border-light overflow-hidden">
+                            {% if p.users and p.users.profil_foto %}
+                            <img src="{{ p.users.profil_foto }}" class="w-full h-full object-cover">
+                            {% else %}
+                            {{ ((p.users.ad_soyad if p.users else 'EM')[:2]).upper() }}
+                            {% endif %}
+                        </div>
+                        <div class="truncate text-left">
+                            <span class="text-xs font-extrabold text-slate-800 block truncate">{{ p.users.ad_soyad if p.users else 'Meslektaş' }}</span>
+                            <span class="text-[10px] text-slate-400 font-semibold block truncate">{{ p.users.sirket_unvani or 'Broker' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- İKİLİ AKSİYON: MESAJ GÖNDER & İŞBİRLİĞİ TEKLİF ET -->
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <a href="/messages/{{ p.porfoy_sahibi_id }}" 
+                       class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl text-center transition flex items-center justify-center gap-1.5 active:scale-95">
+                        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span>Mesaj Gönder</span>
+                    </a>
+
+                    <button type="button" 
+                            onclick="openOfferModal('{{ p.id }}', '{{ p.porfoy_sahibi_id }}', '{{ p.gayrimenkul_tipi }} - {{ p.ilce }}')" 
+                            class="py-2.5 px-3 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl text-center transition shadow-2xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer">
+                        <span>🤝 İşbirliği Başlat</span>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="bg-white rounded-3xl p-6 text-center text-xs text-slate-400 border border-slate-200/80">
+                Bu kriterlere uygun meslektaş portföyü bulunamadı.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 2. ŞİRKET PROJE EŞLEŞMELERİ -->
+    <div class="space-y-3 pt-3">
+        <div class="flex items-center justify-between px-1">
+            <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                <span>Müteahhit / Şirket Projeleri ({{ project_results|length }})</span>
+            </h2>
+            <span class="text-[10px] font-bold text-slate-400">Komisyon Garantili</span>
+        </div>
+
+        {% if project_results and project_results|length > 0 %}
+            {% for prj in project_results %}
+            {% set prj_photos = prj.galeri if prj.galeri else ([prj.kapak_fotografi] if prj.kapak_fotografi else []) %}
+            <div class="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3 relative overflow-hidden transition-all duration-150 hover:shadow-md">
+                
+                <div class="flex items-center justify-between">
+                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+                        <span>⚡ %{{ prj.match_score }} Proje Uyumu</span>
+                    </span>
+                    <span class="text-xs font-black text-purple-700">
+                        %{{ prj.partner_komisyon_orani or 3.0 }} Net Komisyon
+                    </span>
+                </div>
+
+                <!-- Basılı Tutulabilir Proje Görseli -->
+                <div class="relative w-full h-44 rounded-2xl overflow-hidden bg-slate-100 border border-slate-100 cursor-pointer group"
+                     data-quick-view
+                     data-title="{{ prj.ad }} ({{ prj.ilce }})"
+                     data-price="{{ '{:,}'.format(prj.min_fiyat).replace(',', '.') if prj.min_fiyat else '0' }} TL'den Başlayan"
+                     data-desc="{{ prj.aciklama or '' }}"
+                     data-images='{{ prj_photos|tojson }}'>
+                    
+                    <img src="{{ prj.kapak_fotografi or 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80' }}" 
+                         class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+
+                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-black backdrop-blur-2xs">
+                        🔍 Basılı Tut / Tıkla (Renderları İncele)
+                    </div>
+
+                    <div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        <span>🏛️</span>
+                        <span>{{ prj_photos|length }} Görsel</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-extrabold text-slate-900">{{ prj.ad }}</h3>
+                    <p class="text-[11px] text-slate-500 font-medium">{{ prj.ilce }} {% if prj.bolge %}• {{ prj.bolge }}{% endif %}</p>
+                    <p class="text-xs font-black text-slate-900 mt-1">
+                        {{ '{:,}'.format(prj.min_fiyat).replace(',', '.') if prj.min_fiyat else '0' }} TL - {{ '{:,}'.format(prj.max_fiyat).replace(',', '.') if prj.max_fiyat else '0' }} TL
+                    </p>
+                </div>
+
+                <!-- İKİLİ AKSİYON: MESAJ GÖNDER & MÜŞTERİ TESCİL ET -->
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <a href="/messages/{{ prj.firma_id }}" 
+                       class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl text-center transition flex items-center justify-center gap-1.5 active:scale-95">
+                        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span>Firmaya Mesaj</span>
+                    </a>
+
+                    <a href="/projects/{{ prj.id }}/register-client" 
+                       class="py-2.5 px-3 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs rounded-xl text-center transition shadow-2xs flex items-center justify-center gap-1.5 active:scale-95">
+                        <span>📋 Alıcıyı Tescil Et</span>
                     </a>
                 </div>
             </div>
             {% endfor %}
         {% else %}
-            <div class="bg-white rounded-3xl border border-slate-200/90 p-8 text-center text-xs text-slate-400 space-y-1">
-                <p class="font-bold text-slate-700">Eşleşen Meslektaş Portföyü Bulunamadı</p>
-                <p class="text-[11px]">Bölgedeki danışmanlar bu kriterlerde portföy sunduğunda liste güncellenecektir.</p>
+            <div class="bg-white rounded-3xl p-6 text-center text-xs text-slate-400 border border-slate-200/80">
+                Bu bölgede eşleşen aktif müteahhit projesi bulunamadı.
             </div>
         {% endif %}
+    </div>
+
+</div>
+
+<!-- ================= 1. HIZLI İNCELEME & BASILI TUTMA LIGHTBOX MODALI ================= -->
+<div id="quickViewModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex flex-col justify-between p-4 sm:p-6 select-none">
+    <!-- Üst Kontrol -->
+    <div class="flex items-center justify-between text-white shrink-0 pb-3 border-b border-white/10">
+        <div>
+            <h3 id="quickModalTitle" class="text-xs font-black tracking-tight theme-text-primary uppercase">Görsel İnceleme</h3>
+            <p id="quickModalPrice" class="text-[11px] text-slate-300 font-mono"></p>
+        </div>
+        <button type="button" onclick="closeQuickViewModal()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center transition cursor-pointer text-base">✕</button>
+    </div>
+
+    <!-- Orta Görsel Alanı & Kaydırma Butonları -->
+    <div class="relative flex-1 flex items-center justify-center my-auto min-h-0 p-2">
+        <button type="button" onclick="prevModalImage()" class="absolute left-2 z-10 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/80 transition text-lg cursor-pointer">‹</button>
+        
+        <img id="quickModalImg" src="" alt="Önizleme" class="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl transition duration-200">
+        
+        <button type="button" onclick="nextModalImage()" class="absolute right-2 z-10 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/80 transition text-lg cursor-pointer">›</button>
+    </div>
+
+    <!-- Alt Bilgi ve İndikatör -->
+    <div class="text-center shrink-0 pt-2 text-xs text-slate-400 space-y-1">
+        <div id="quickModalCounter" class="font-mono font-bold text-[11px] text-emerald-400">1 / 1</div>
+        <p id="quickModalDesc" class="text-[11px] text-slate-300 line-clamp-2 max-w-sm mx-auto"></p>
+    </div>
+</div>
+
+<!-- ================= 2. İŞBİRLİĞİ TEKLİFİ MODALI (GARANTİLİ POST) ================= -->
+<div id="offerCollabModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-4 shadow-2xl border border-slate-100">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+                <h3 class="text-xs font-black text-slate-900 uppercase">İşbirliği Teklifi İlet</h3>
+                <p id="offerModalTargetTitle" class="text-[10px] theme-text-dark font-bold truncate max-w-[200px]"></p>
+            </div>
+            <button type="button" onclick="closeOfferModal()" class="text-slate-400 hover:text-slate-700 text-sm font-bold cursor-pointer">✕</button>
+        </div>
+
+        <form action="/collaborations/send" method="POST" class="space-y-3">
+            <input type="hidden" name="portfolio_id" id="offerPortfolioId">
+            <input type="hidden" name="talep_alan_id" id="offerTargetOwnerId">
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Komisyon Paylaşımı Teklifi *</label>
+                <select name="komisyon_paylasimi" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none">
+                    <option value="%50 - %50 Standart Paylaşım">%50 - %50 Standart Paylaşım</option>
+                    <option value="Hizmet Bedeli Alıcı Tarafı Bende">Hizmet Bedeli Alıcı Tarafı Bende</option>
+                    <option value="Özel Teklif / Şartlar Görüşülecek">Özel Teklif / Şartlar Görüşülecek</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Alıcı Notu & Detaylar</label>
+                <textarea name="notlar" rows="3" required placeholder="Hazır alıcımın bütçesi uygun, bu portföy için yer gösterimi organize etmek istiyorum..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"></textarea>
+            </div>
+
+            <button type="submit" class="w-full py-3.5 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer">
+                Teklifi Danışmana İlet
+            </button>
+        </form>
     </div>
 </div>
 
 <script>
-    function switchResultTab(tabName) {
-        const btnProjects = document.getElementById('btnTabProjects');
-        const btnPortfolios = document.getElementById('btnTabPortfolios');
-        const secProjects = document.getElementById('sectionProjects');
-        const secPortfolios = document.getElementById('sectionPortfolios');
-
-        if (tabName === 'projects') {
-            btnProjects.className = 'py-2.5 rounded-xl transition-all duration-150 theme-bg-primary text-white shadow-sm';
-            btnPortfolios.className = 'py-2.5 rounded-xl transition-all duration-150 theme-text-dark hover:bg-white/50';
-            secProjects.classList.remove('hidden');
-            secPortfolios.classList.add('hidden');
-        } else {
-            btnPortfolios.className = 'py-2.5 rounded-xl transition-all duration-150 theme-bg-primary text-white shadow-sm';
-            btnProjects.className = 'py-2.5 rounded-xl transition-all duration-150 theme-text-dark hover:bg-white/50';
-            secPortfolios.classList.remove('hidden');
-            secProjects.classList.add('hidden');
-        }
+    // ================= İŞBİRLİĞİ MODAL KONTROLLERİ =================
+    function openOfferModal(portId, ownerId, title) {
+        document.getElementById('offerPortfolioId').value = portId;
+        document.getElementById('offerTargetOwnerId').value = ownerId;
+        document.getElementById('offerModalTargetTitle').innerText = title || 'Portföy';
+        document.getElementById('offerCollabModal').classList.remove('hidden');
     }
+
+    function closeOfferModal() {
+        document.getElementById('offerCollabModal').classList.add('hidden');
+    }
+
+    // ================= BASILI TUTMA & LIGHTBOX MOTORU =================
+    let currentModalImages = [];
+    let currentImageIndex = 0;
+    let pressTimer = null;
+
+    function openQuickView(title, price, desc, images) {
+        if (!images || images.length === 0) {
+            images = ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80"];
+        }
+        currentModalImages = images;
+        currentImageIndex = 0;
+
+        document.getElementById('quickModalTitle').innerText = title || 'Görsel İnceleme';
+        document.getElementById('quickModalPrice').innerText = price || '';
+        document.getElementById('quickModalDesc').innerText = desc || '';
+        
+        updateModalImage();
+        document.getElementById('quickViewModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeQuickViewModal() {
+        document.getElementById('quickViewModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    function updateModalImage() {
+        const img = document.getElementById('quickModalImg');
+        img.src = currentModalImages[currentImageIndex];
+        document.getElementById('quickModalCounter').innerText = `${currentImageIndex + 1} / ${currentModalImages.length}`;
+    }
+
+    function nextModalImage() {
+        if (currentModalImages.length <= 1) return;
+        currentImageIndex = (currentImageIndex + 1) % currentModalImages.length;
+        updateModalImage();
+    }
+
+    function prevModalImage() {
+        if (currentModalImages.length <= 1) return;
+        currentImageIndex = (currentImageIndex - 1 + currentModalImages.length) % currentModalImages.length;
+        updateModalImage();
+    }
+
+    // Mobilde basılı tutma, masaüstünde çift tık veya direkt tık ile tetikleme
+    function attachQuickViewListeners() {
+        document.querySelectorAll('[data-quick-view]').forEach(el => {
+            const title = el.getAttribute('data-title');
+            const price = el.getAttribute('data-price');
+            const desc = el.getAttribute('data-desc');
+            let images = [];
+            try {
+                images = JSON.parse(el.getAttribute('data-images') || '[]');
+            } catch(e) {
+                images = [];
+            }
+
+            // Mobil uzun basma (Long-press)
+            el.addEventListener('touchstart', (e) => {
+                pressTimer = setTimeout(() => {
+                    openQuickView(title, price, desc, images);
+                }, 350);
+            }, { passive: true });
+
+            el.addEventListener('touchend', () => clearTimeout(pressTimer));
+            el.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
+            // Tıklama ile de anında açılabilmesi
+            el.addEventListener('click', () => {
+                openQuickView(title, price, desc, images);
+            });
+        });
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeQuickViewModal();
+        if (e.key === 'ArrowRight') nextModalImage();
+        if (e.key === 'ArrowLeft') prevModalImage();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        attachQuickViewListeners();
+    });
 </script>
 {% endblock %}

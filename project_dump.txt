@@ -1792,43 +1792,6 @@ def get_company_notifications_page(request: Request, user_id: str = Cookie(None)
         }
     )
 
-@router.get("/api/notifications")
-def api_get_company_notifications(user_id: str = Cookie(None)):
-    user = get_company_user(user_id)
-    if not user:
-        return JSONResponse({"unread_count": 0, "notifications": []}, status_code=401)
-
-    clean_id = str(user["id"])
-    try:
-        res = supabase.table("notifications").select("*").eq("user_id", clean_id).order("created_at", desc=True).limit(8).execute()
-        all_notifs = res.data or []
-        
-        unread_count = 0
-        for n in all_notifs:
-            is_read = n.get("okundu_mu") if "okundu_mu" in n else n.get("okundu", False)
-            if not is_read:
-                unread_count += 1
-                
-        return JSONResponse({"unread_count": unread_count, "notifications": all_notifs})
-    except Exception as e:
-        return JSONResponse({"unread_count": 0, "notifications": [], "error": str(e)})
-
-@router.post("/api/notifications/read-all")
-def api_mark_notifications_read(user_id: str = Cookie(None)):
-    user = get_company_user(user_id)
-    if not user:
-        return JSONResponse({"success": False}, status_code=401)
-
-    clean_id = str(user["id"])
-    try:
-        try:
-            supabase.table("notifications").update({"okundu_mu": True}).eq("user_id", clean_id).execute()
-        except Exception:
-            supabase.table("notifications").update({"okundu": True}).eq("user_id", clean_id).execute()
-        return JSONResponse({"success": True})
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)})
-
 # ================= 6. ŞİRKET PROFİLİ & AYARLAR =================
 @router.get("/profile", response_class=HTMLResponse)
 @router.get("/settings", response_class=HTMLResponse)
@@ -1892,6 +1855,85 @@ def get_company_profile(request: Request, user_id: str = Cookie(None)):
             "err": request.query_params.get("err")
         }
     )
+
+# ================= ŞİRKET BİLGİLERİ VE LOGO GÜNCELLEME (POST) =================
+@router.post("/profile")
+@router.post("/profile/update")
+async def post_update_company_profile(
+    request: Request,
+    ad_soyad: str = Form(...),
+    telefon: str = Form(...),
+    sirket_unvani: str = Form(None),
+    marka_adi: str = Form(None),
+    calisma_bolgesi: str = Form(None),
+    profil_foto: UploadFile = File(None),
+    user_id: str = Cookie(None)
+):
+    user = get_company_user(user_id)
+    if not user:
+        return RedirectResponse(url="/login?type=company", status_code=303)
+
+    clean_id = str(user["id"])
+    update_data = {
+        "ad_soyad": ad_soyad.strip(),
+        "telefon": telefon.strip(),
+        "sirket_unvani": sirket_unvani.strip() if sirket_unvani else None,
+        "marka_adi": marka_adi.strip() if marka_adi else None,
+        "calisma_bolgesi": calisma_bolgesi.strip() if calisma_bolgesi else None
+    }
+
+    # Yeni logo/fotoğraf yüklendiyse Storage'a at ve URL'i kaydet
+    if profil_foto and profil_foto.filename:
+        try:
+            b_img = await profil_foto.read()
+            if len(b_img) > 0:
+                ext = profil_foto.filename.split(".")[-1].lower() if "." in profil_foto.filename else "jpg"
+                f_name = f"company_{clean_id}_{uuid.uuid4().hex[:6]}.{ext}"
+                supabase.storage.from_("portfolios").upload(
+                    path=f_name,
+                    file=b_img,
+                    file_options={"content-type": profil_foto.content_type or f"image/{ext}"}
+                )
+                update_data["profil_foto"] = supabase.storage.from_("portfolios").get_public_url(f_name)
+        except Exception as e_logo:
+            print(f"[ŞİRKET LOGO YÜKLEME HATASI]: {e_logo}")
+
+    try:
+        supabase.table("users").update(update_data).eq("id", clean_id).execute()
+        return RedirectResponse(url="/company/profile?msg=profile_updated", status_code=303)
+    except Exception as e:
+        print(f"[ŞİRKET PROFİL GÜNCELLEME HATASI]: {e}")
+        return RedirectResponse(url="/company/profile?err=profile_failed", status_code=303)
+
+# ================= ŞİRKET ŞİFRE DEĞİŞTİRME (POST) =================
+@router.post("/change-password")
+@router.post("/settings/change-password")
+def post_change_company_password(
+    request: Request,
+    eski_sifre: str = Form(...),
+    yeni_sifre: str = Form(...),
+    yeni_sifre_tekrar: str = Form(...),
+    user_id: str = Cookie(None)
+):
+    user = get_company_user(user_id)
+    if not user:
+        return RedirectResponse(url="/login?type=company", status_code=303)
+
+    clean_id = str(user["id"])
+
+    if yeni_sifre != yeni_sifre_tekrar:
+        return RedirectResponse(url="/company/profile?err=pass_mismatch", status_code=303)
+
+    try:
+        u_res = supabase.table("users").select("sifre").eq("id", clean_id).single().execute()
+        if not u_res.data or u_res.data.get("sifre") != eski_sifre:
+            return RedirectResponse(url="/company/profile?err=wrong_old_pass", status_code=303)
+
+        supabase.table("users").update({"sifre": yeni_sifre}).eq("id", clean_id).execute()
+        return RedirectResponse(url="/company/profile?msg=pass_updated", status_code=303)
+    except Exception as e:
+        print(f"[ŞİRKET ŞİFRE DEĞİŞTİRME HATASI]: {e}")
+        return RedirectResponse(url="/company/profile?err=pass_failed", status_code=303)
 
 @router.post("/settings/notifications")
 def post_update_company_notifications(
@@ -4789,24 +4831,35 @@ def mask_phone_number(phone: str) -> str:
         return f"{prefix} XXX XX {suffix}"
     return "05XX XXX XX XX"
 
+from app.routers.portfolios import TURKEY_DISTRICTS
+
 # ================= 1. PROJE AĞI (TÜM PROJELER) =================
 @router.get("", response_class=HTMLResponse)
-def get_projects_catalog(request: Request, user_id: str = Cookie(None), ilce: str = None):
+def get_projects_catalog(request: Request, user_id: str = Cookie(None)):
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
-    query = supabase.table("projects").select("*, users:firma_id(sirket_unvani, ad_soyad, profil_foto)").eq("durum", "Aktif")
-    if ilce:
-        query = query.ilike("ilce", f"%{ilce.strip()}%")
-
-    projects = query.order("created_at", desc=True).execute().data or []
+    projects = []
+    try:
+        query = (
+            supabase.table("projects")
+            .select("*, users:firma_id(sirket_unvani, ad_soyad, profil_foto)")
+            .eq("durum", "Aktif")
+            .order("created_at", desc=True)
+        )
+        projects = query.execute().data or []
+    except Exception as e:
+        print(f"[PROJE KATALOG GETİRME HATASI]: {e}")
+        projects = []
 
     return templates.TemplateResponse(
         request=request,
         name="projects/catalog.html",
-        context={"projects": projects, "selected_ilce": ilce or ""}
+        context={
+            "projects": projects,
+            "turkey_data": TURKEY_DISTRICTS
+        }
     )
-
 # ================= 2. PROJE DETAY SAYFASI =================
 @router.get("/detail/{project_id}", response_class=HTMLResponse)
 def get_project_detail(request: Request, project_id: str, user_id: str = Cookie(None)):
@@ -9063,7 +9116,7 @@ FILE: .\app\templates\company\layout.html
                     <button type="button" 
                             id="btnBellNotifications" 
                             onclick="toggleNotifDrawer()" 
-                            class="relative p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition active:scale-95">
+                            class="relative p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition active:scale-95 cursor-pointer">
                         <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
@@ -9080,7 +9133,7 @@ FILE: .\app\templates\company\layout.html
                                 <h3 class="text-xs font-black text-slate-900">Bildirimler</h3>
                                 <span id="drawerUnreadCount" class="text-[10px] font-bold theme-text-dark theme-bg-light px-2 py-0.2 rounded-md">0 Yeni</span>
                             </div>
-                            <button type="button" onclick="markAllNotificationsAsRead()" class="text-[10px] font-bold text-slate-400 hover:theme-text-primary transition">
+                            <button type="button" onclick="markAllNotificationsAsRead()" class="text-[10px] font-bold text-slate-400 hover:theme-text-primary transition cursor-pointer">
                                 Tümünü Okundu Say
                             </button>
                         </div>
@@ -9135,9 +9188,46 @@ FILE: .\app\templates\company\layout.html
             }
         }
 
+        // Bildirim tipine göre şirket panelindeki doğru sayfayı belirleyen fonksiyon
+        function resolveCompanyNotificationUrl(notif) {
+            const rawUrl = String(notif.hedef_url || '').trim();
+            const title = String(notif.baslik || '').toLocaleLowerCase('tr');
+            const body = String(notif.icerik || '').toLocaleLowerCase('tr');
+
+            // 1. Mesaj ve Sohbet Bildirimleri -> Şirketin Canlı Mesajlaşma Konsolunun olduğu Partnerler sayfasına
+            if (rawUrl.startsWith('/messages') || title.includes('mesaj') || title.includes('sohbet') || body.includes('mesaj')) {
+                return '/company/partners';
+            }
+
+            // 2. Satış ve Komisyon Bildirimleri -> Satış Yönetimi sayfasına
+            if (title.includes('satış onaylandı') || title.includes('komisyon hak edildi') || rawUrl.includes('/sales')) {
+                return '/company/sales';
+            }
+
+            // 3. Müşteri Tescili Bildirimleri -> Müşteri Tescilleri sayfasına
+            if (title.includes('tescil') || title.includes('müşteri') || rawUrl.includes('/registrations')) {
+                return '/company/registrations';
+            }
+
+            // 4. Eğer rawUrl zaten /company/ ile başlıyorsa onu koru
+            if (rawUrl.startsWith('/company/')) {
+                return rawUrl;
+            }
+
+            // 5. Varsayılan güvenli şirket yönlendirmesi
+            return '/company/registrations';
+        }
+
+        function escapeHtml(text) {
+            return String(text || '').replace(/[&<>"']/g, function(m) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[m];
+            });
+        }
+
         async function fetchNotifications() {
             try {
                 const res = await fetch('/company/api/notifications');
+                if (!res.ok) return;
                 const data = await res.json();
                 
                 const listEl = document.getElementById('drawerNotifList');
@@ -9145,12 +9235,14 @@ FILE: .\app\templates\company\layout.html
                 const sidebarBadge = document.getElementById('sidebarNotifBadge');
                 const drawerCount = document.getElementById('drawerUnreadCount');
 
-                if (data.unread_count > 0) {
-                    badgeEl.innerText = data.unread_count;
+                const unread = data.unread_count || 0;
+
+                if (unread > 0) {
+                    badgeEl.innerText = unread > 99 ? '99+' : unread;
                     badgeEl.classList.remove('hidden');
-                    sidebarBadge.innerText = data.unread_count;
+                    sidebarBadge.innerText = unread > 99 ? '99+' : unread;
                     sidebarBadge.classList.remove('hidden');
-                    drawerCount.innerText = `${data.unread_count} Yeni`;
+                    drawerCount.innerText = `${unread} Yeni`;
                 } else {
                     badgeEl.classList.add('hidden');
                     sidebarBadge.classList.add('hidden');
@@ -9164,15 +9256,18 @@ FILE: .\app\templates\company\layout.html
 
                 listEl.innerHTML = '';
                 data.notifications.forEach(n => {
+                    const targetUrl = resolveCompanyNotificationUrl(n);
+                    const isRead = (n.okundu_mu !== undefined) ? n.okundu_mu : (n.okundu !== undefined ? n.okundu : false);
+
                     const item = document.createElement('a');
-                    item.href = n.hedef_url || '/company/notifications';
-                    item.className = `block p-2.5 rounded-2xl border transition ${n.okundu_mu ? 'bg-slate-50 border-slate-100 text-slate-600' : 'theme-bg-light border-slate-200 text-slate-900 font-bold'}`;
+                    item.href = targetUrl;
+                    item.className = `block p-2.5 rounded-2xl border transition ${isRead ? 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100' : 'theme-bg-light border-slate-200 text-slate-900 font-bold hover:shadow-xs'}`;
                     item.innerHTML = `
                         <div class="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
-                            <span class="font-bold uppercase">${n.baslik}</span>
-                            <span>${(n.created_at || '').substring(0, 10)}</span>
+                            <span class="font-extrabold uppercase truncate mr-2 ${!isRead ? 'theme-text-dark' : ''}">${escapeHtml(n.baslik || 'Bildirim')}</span>
+                            <span class="font-mono shrink-0">${(n.created_at || '').substring(0, 10)}</span>
                         </div>
-                        <p class="text-[11px] leading-snug line-clamp-2">${n.icerik}</p>
+                        <p class="text-[11px] leading-snug line-clamp-2">${escapeHtml(n.icerik || '')}</p>
                     `;
                     listEl.appendChild(item);
                 });
@@ -9204,10 +9299,10 @@ FILE: .\app\templates\company\layout.html
             }
         });
 
-        // Sayfa açılışında yükleme ve her 15 saniyede bir canlı yoklama (Polling)
+        // Sayfa açılışında yükleme ve her 12 saniyede bir canlı yoklama (Polling)
         window.addEventListener('DOMContentLoaded', () => {
             fetchNotifications();
-            setInterval(fetchNotifications, 15000);
+            setInterval(fetchNotifications, 12000);
         });
     </script>
 </body>
@@ -9220,64 +9315,98 @@ FILE: .\app\templates\company\notifications.html
 {% extends "company/layout.html" %}
 
 {% block title %}Bildirimler - Proje Yönetim Konsolu{% endblock %}
-{% block header_title %}Bildirimler Masası{% endblock %}
+{% block header_title %}Sistem & Operasyon Bildirimleri{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6 pb-16">
-    
-    <!-- Üst Başlık & Eylem Çubuğu -->
+<div class="max-w-3xl mx-auto space-y-6 pb-20">
+
+    <!-- Üst Bar ve Başlık -->
     <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-2xs flex items-center justify-between">
         <div>
-            <h2 class="text-base font-black text-slate-900 tracking-tight">Sistem ve İşbirliği Bildirimleri</h2>
-            <p class="text-xs text-slate-400 font-semibold mt-0.5">Emlakçı ağı tarafından projelerinize yapılan müşteri tescilleri, mesajlar ve iptal durumları.</p>
+            <h2 class="text-base font-black text-slate-900 tracking-tight">Sistem & Süreç Bildirimleri</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Müşteri tescilleri, satış kapanışları ve operasyonel güncellemeler.</p>
         </div>
-        <form action="/company/api/notifications/read-all" method="POST" onsubmit="event.preventDefault(); markAllNotificationsAsRead().then(() => window.location.reload());">
-            <button type="submit" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition active:scale-95">
-                Tümünü Okundu İşaretle
-            </button>
-        </form>
+        <button type="button" 
+                onclick="markAllAsReadCompany()" 
+                class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer active:scale-95 shadow-2xs">
+            Tümünü Okundu Say
+        </button>
     </div>
 
-    <!-- Bildirim Kartları -->
+    <!-- Bildirim Listesi -->
     <div class="space-y-3">
         {% if notifications and notifications|length > 0 %}
             {% for n in notifications %}
-            <div class="bg-white border rounded-3xl p-5 shadow-2xs transition flex items-start justify-between gap-4 {% if not n.okundu_mu %}border-emerald-300 ring-2 ring-emerald-500/10{% else %}border-slate-200/80{% endif %}">
-                <div class="flex items-start gap-3.5 min-w-0">
-                    <div class="w-10 h-10 rounded-2xl theme-bg-light theme-text-dark flex items-center justify-center shrink-0 border theme-border-light mt-0.5">
-                        <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                        </svg>
-                    </div>
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-xs font-black text-slate-900">{{ n.baslik }}</h3>
-                            {% if not n.okundu_mu %}
-                            <span class="w-2 h-2 rounded-full theme-bg-primary"></span>
-                            {% endif %}
+            {% set target_link = n.hedef_url or '/company/registrations' %}
+            
+            <a href="{{ target_link }}" 
+               class="block bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-md rounded-3xl p-5 shadow-2xs transition-all duration-200 group active:scale-[0.99] cursor-pointer">
+                
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-start gap-3.5 min-w-0">
+                        <!-- İkon -->
+                        <div class="w-10 h-10 rounded-2xl theme-bg-light theme-text-dark border theme-border-light flex items-center justify-center shrink-0 text-sm font-black mt-0.5 shadow-2xs">
+                            <svg class="w-5 h-5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                            </svg>
                         </div>
-                        <p class="text-xs text-slate-600 mt-1 font-medium leading-relaxed">{{ n.icerik }}</p>
-                        <span class="text-[10px] text-slate-400 font-mono mt-2 block">{{ n.created_at[:16].replace('T', ' ') if n.created_at else '' }}</span>
-                    </div>
-                </div>
 
-                {% if n.hedef_url %}
-                <a href="{{ n.hedef_url }}" class="px-4 py-2 theme-bg-primary theme-hover-bg text-white font-extrabold text-xs rounded-xl transition shadow-2xs shrink-0 active:scale-95">
-                    İncele ›
-                </a>
-                {% endif %}
-            </div>
+                        <!-- Metinler -->
+                        <div class="space-y-1 min-w-0">
+                            <h3 class="text-xs font-black text-slate-900 group-hover:theme-text-primary transition truncate">
+                                {{ n.baslik or 'Bildirim' }}
+                            </h3>
+                            <p class="text-xs text-slate-600 font-medium leading-relaxed break-words">
+                                {{ n.icerik or '' }}
+                            </p>
+                            <div class="flex items-center gap-2 pt-1 text-[10px] text-slate-400 font-mono">
+                                <span>{{ n.created_at[:16].replace('T', ' ') if n.created_at else '' }}</span>
+                                <span>•</span>
+                                <span class="theme-text-dark font-sans font-bold group-hover:underline">Detaya Git ›</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Okundu / Okunmadı Durumu -->
+                    {% set is_read = n.okundu_mu if 'okundu_mu' in n else n.okundu %}
+                    {% if not is_read %}
+                        <span class="w-2.5 h-2.5 rounded-full theme-bg-primary shrink-0 mt-1 shadow-xs"></span>
+                    {% endif %}
+                </div>
+            </a>
             {% endfor %}
         {% else %}
-            <div class="bg-white rounded-3xl border border-slate-200 p-12 text-center text-xs text-slate-400 space-y-1 shadow-2xs">
-                <p class="font-bold text-slate-700">Henüz Bir Bildirim Bulunmuyor</p>
-                <p class="text-[11px]">Emlakçılar projelerinize müşteri tescili yaptığında veya mesaj gönderdiğinde bildirimler burada listelenecektir.</p>
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-12 text-center space-y-3 shadow-2xs">
+                <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                    <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-xs font-black text-slate-700">Bildiriminiz Bulunmuyor</h3>
+                    <p class="text-[11px] text-slate-400 max-w-sm mx-auto">Müşteri yönlendirmeleri, partner hareketleri ve sözleşme durumları burada listelenecektir.</p>
+                </div>
             </div>
         {% endif %}
     </div>
 
 </div>
+
+<script>
+    async function markAllAsReadCompany() {
+        try {
+            const res = await fetch('/company/api/notifications/read-all', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            }
+        } catch(e) {
+            console.error("Bildirimler okundu işaretlenemedi:", e);
+        }
+    }
+</script>
 {% endblock %}
 
 ======================================================================
@@ -9846,6 +9975,14 @@ FILE: .\app\templates\company\profile.html
     <div class="p-4 theme-bg-light border theme-border-light theme-text-dark text-xs font-bold rounded-2xl shadow-2xs">
         ✓ Destek biletiniz EmlakMatch operasyon ekibine iletildi.
     </div>
+    {% elif err == 'pass_mismatch' %}
+    <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl shadow-2xs">
+        ✕ Girdiğiniz yeni şifreler birbiriyle eşleşmiyor.
+    </div>
+    {% elif err == 'wrong_old_pass' %}
+    <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl shadow-2xs">
+        ✕ Mevcut şifrenizi hatalı girdiniz.
+    </div>
     {% elif err %}
     <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl shadow-2xs">
         ✕ İşlem sırasında bir hata oluştu: {{ err }}
@@ -9861,9 +9998,9 @@ FILE: .\app\templates\company\profile.html
             <div class="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-2xs text-center space-y-4">
                 <div class="relative w-24 h-24 mx-auto rounded-3xl bg-slate-100 border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center">
                     {% if user and user.profil_foto %}
-                    <img src="{{ user.profil_foto }}" class="w-full h-full object-cover">
+                    <img id="profileCardLogoImg" src="{{ user.profil_foto }}" class="w-full h-full object-cover">
                     {% else %}
-                    <span class="text-3xl font-black theme-text-primary">{{ (user.sirket_unvani or 'Ş')[0]|upper }}</span>
+                    <span id="profileCardLogoInitial" class="text-3xl font-black theme-text-primary">{{ (user.sirket_unvani or 'Ş')[0]|upper }}</span>
                     {% endif %}
                 </div>
 
@@ -9918,7 +10055,7 @@ FILE: .\app\templates\company\profile.html
                 <div class="grid grid-cols-4 gap-2 pt-1" id="colorPaletteContainer"></div>
 
                 <div class="pt-2 text-center">
-                    <button type="button" onclick="resetDefaultTheme()" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition">
+                    <button type="button" onclick="resetDefaultTheme()" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition cursor-pointer">
                         Varsayılan Yeşile Sıfırla
                     </button>
                 </div>
@@ -9948,13 +10085,22 @@ FILE: .\app\templates\company\profile.html
                     <p class="text-xs text-slate-400 font-medium">Bu bilgiler danışmanların proje detayında ve kurumsal künyenizde görüntülenir.</p>
                 </div>
 
-                <!-- Özel Tasarım Logo Yükleme Bileşeni -->
+                <!-- Logo Yükleme Alanı & Canlı Önizleme -->
                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-4">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-800">Şirket Logosu Değiştir</label>
-                        <p class="text-[10px] text-slate-400">PNG veya JPG formatında kurumsal logo yükleyin.</p>
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div id="logoLivePreviewBox" class="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                            {% if user and user.profil_foto %}
+                            <img src="{{ user.profil_foto }}" class="w-full h-full object-cover">
+                            {% else %}
+                            <span class="text-xs font-black text-slate-400">Logo</span>
+                            {% endif %}
+                        </div>
+                        <div class="min-w-0">
+                            <label class="block text-[11px] font-bold text-slate-800">Şirket Logosu Değiştir</label>
+                            <p class="text-[10px] text-slate-400">PNG veya JPG formatında kurumsal logo yükleyin.</p>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 shrink-0">
                         <input type="file" 
                                id="companyLogoInput" 
                                name="profil_foto" 
@@ -9965,10 +10111,10 @@ FILE: .\app\templates\company\profile.html
                         <label for="companyLogoInput" 
                                class="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl theme-bg-primary theme-hover-bg text-white text-xs font-bold transition shadow-xs active:scale-95">
                             <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <span>Dosya Seç</span>
+                            <span>Logo Seç</span>
                         </label>
                         
-                        <span id="logoFileNameDisplay" class="text-xs text-slate-400 font-medium truncate max-w-[150px]">
+                        <span id="logoFileNameDisplay" class="text-xs text-slate-400 font-medium truncate max-w-[130px]">
                             Seçilmedi
                         </span>
                     </div>
@@ -9977,32 +10123,32 @@ FILE: .\app\templates\company\profile.html
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Şirket Resmi Ticari Unvanı *</label>
-                        <input type="text" name="sirket_unvani" value="{{ user.sirket_unvani or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="text" name="sirket_unvani" value="{{ user.sirket_unvani or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Ticari Marka / Geliştirici Adı</label>
-                        <input type="text" name="marka_adi" value="{{ user.marka_adi or '' }}" placeholder="Örn: EMA Geliştirme" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="text" name="marka_adi" value="{{ user.marka_adi or '' }}" placeholder="Örn: EMA Geliştirme" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yetkili Adı Soyadı *</label>
-                        <input type="text" name="ad_soyad" value="{{ user.ad_soyad or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="text" name="ad_soyad" value="{{ user.ad_soyad or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yetkili Telefon *</label>
-                        <input type="tel" name="telefon" value="{{ user.telefon or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="tel" name="telefon" value="{{ user.telefon or '' }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Merkez / Faaliyet Bölgesi</label>
-                    <input type="text" name="calisma_bolgesi" value="{{ user.calisma_bolgesi or '' }}" placeholder="Örn: İstanbul - Beşiktaş, Sarıyer, Beykoz" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                    <input type="text" name="calisma_bolgesi" value="{{ user.calisma_bolgesi or '' }}" placeholder="Örn: İstanbul - Beşiktaş, Sarıyer, Beykoz" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                 </div>
 
                 <div class="pt-2 flex justify-end">
-                    <button type="submit" class="px-6 py-2.5 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                    <button type="submit" class="px-6 py-2.5 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95 cursor-pointer">
                         Kurumsal Bilgileri Kaydet
                     </button>
                 </div>
@@ -10021,7 +10167,7 @@ FILE: .\app\templates\company\profile.html
                             <span class="font-extrabold text-slate-900 block">Yeni Müşteri Tescil Bildirimleri</span>
                             <span class="text-[10px] text-slate-400 font-medium block">Bir danışman projenize alıcı yönlendirdiğinde anında bildirim alın.</span>
                         </div>
-                        <input type="checkbox" name="notify_collab" value="true" {% if settings.notify_collab %}checked{% endif %} class="w-4 h-4 rounded border-slate-300">
+                        <input type="checkbox" name="notify_collab" value="true" {% if settings.notify_collab %}checked{% endif %} class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                     </label>
 
                     <label class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition">
@@ -10029,7 +10175,7 @@ FILE: .\app\templates\company\profile.html
                             <span class="font-extrabold text-slate-900 block">Danışman Mesaj Bildirimleri</span>
                             <span class="text-[10px] text-slate-400 font-medium block">Partner brokerlar mesaj gönderdiğinde bildirim kutunuzda görüntüleyin.</span>
                         </div>
-                        <input type="checkbox" name="notify_messages" value="true" {% if settings.notify_messages %}checked{% endif %} class="w-4 h-4 rounded border-slate-300">
+                        <input type="checkbox" name="notify_messages" value="true" {% if settings.notify_messages %}checked{% endif %} class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                     </label>
 
                     <label class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition">
@@ -10037,12 +10183,12 @@ FILE: .\app\templates\company\profile.html
                             <span class="font-extrabold text-slate-900 block">Satış ve Rezervasyon Onay Bildirimleri</span>
                             <span class="text-[10px] text-slate-400 font-medium block">Kapatılan satış ve opsiyonlama işlemlerinin özet bildirimleri.</span>
                         </div>
-                        <input type="checkbox" name="notify_sales" value="true" {% if settings.notify_sales %}checked{% endif %} class="w-4 h-4 rounded border-slate-300">
+                        <input type="checkbox" name="notify_sales" value="true" {% if settings.notify_sales %}checked{% endif %} class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                     </label>
                 </div>
 
                 <div class="pt-2 flex justify-end">
-                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95 cursor-pointer">
                         Tercihleri Kaydet
                     </button>
                 </div>
@@ -10058,20 +10204,20 @@ FILE: .\app\templates\company\profile.html
                 <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Mevcut Şifre *</label>
-                        <input type="password" name="eski_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="password" name="eski_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yeni Şifre *</label>
-                        <input type="password" name="yeni_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="password" name="yeni_sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Yeni Şifre Tekrar *</label>
-                        <input type="password" name="yeni_sifre_tekrar" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="password" name="yeni_sifre_tekrar" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                 </div>
 
                 <div class="pt-2 flex justify-end">
-                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95 cursor-pointer">
                         Şifreyi Güncelle
                     </button>
                 </div>
@@ -10090,14 +10236,14 @@ FILE: .\app\templates\company\profile.html
                 <form action="/company/settings/support" method="POST" class="space-y-3 text-xs">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Konu Başlığı *</label>
-                        <input type="text" name="konu" required placeholder="Örn: Yeni Proje Broşür Yükleme Sorunu, Tescil İptali Hk." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:outline-none">
+                        <input type="text" name="konu" required placeholder="Örn: Yeni Proje Broşür Yükleme Sorunu, Tescil İptali Hk." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1.5">Mesajınız / Talep Detayı *</label>
-                        <textarea name="mesaj" required rows="3" placeholder="Yaşadığınız durum hakkında detay veriniz..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:bg-white focus:outline-none leading-relaxed"></textarea>
+                        <textarea name="mesaj" required rows="3" placeholder="Yaşadığınız durum hakkında detay veriniz..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition leading-relaxed"></textarea>
                     </div>
                     <div class="flex justify-end">
-                        <button type="submit" class="px-5 py-2 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95">
+                        <button type="submit" class="px-5 py-2 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl transition shadow-xs active:scale-95 cursor-pointer">
                             Destek Talebini İlet
                         </button>
                     </div>
@@ -10131,12 +10277,23 @@ FILE: .\app\templates\company\profile.html
 <script>
     function handleLogoFileSelect(input) {
         const display = document.getElementById('logoFileNameDisplay');
-        if (input.files && input.files.length > 0) {
-            display.innerText = input.files[0].name;
-            display.className = 'text-xs font-bold text-slate-800 truncate max-w-[150px]';
+        const liveBox = document.getElementById('logoLivePreviewBox');
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            display.innerText = file.name;
+            display.className = 'text-xs font-bold text-slate-800 truncate max-w-[130px]';
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    liveBox.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+                };
+                reader.readAsDataURL(file);
+            }
         } else {
             display.innerText = 'Seçilmedi';
-            display.className = 'text-xs text-slate-400 font-medium truncate max-w-[150px]';
+            display.className = 'text-xs text-slate-400 font-medium truncate max-w-[130px]';
         }
     }
 
@@ -10195,7 +10352,7 @@ FILE: .\app\templates\company\profile.html
             btn.type = 'button';
             btn.title = t.name;
             btn.onclick = () => applyTheme(t);
-            btn.className = `h-9 rounded-xl flex items-center justify-center transition-all duration-150 transform hover:scale-105 ${isSelected ? 'ring-2 ring-slate-900 ring-offset-2 scale-105 shadow-sm' : 'border border-black/10'}`;
+            btn.className = `h-9 rounded-xl flex items-center justify-center transition-all duration-150 transform hover:scale-105 cursor-pointer ${isSelected ? 'ring-2 ring-slate-900 ring-offset-2 scale-105 shadow-sm' : 'border border-black/10'}`;
             btn.style.backgroundColor = t.primary;
 
             if (isSelected) {
@@ -10696,7 +10853,7 @@ FILE: .\app\templates\company\project_add.html
             </div>
         </div>
 
-        <!-- 3. GÖRSELLER, KAT PLANLARI VE SATIŞ BROŞÜRÜ -->
+        <!-- 3. GÖRSELLER, KAT PLANLARI VE SATIŞ BROŞÜRÜ (CANLI ÖNİZLEME & LIGHTBOX ENTEGRELİ) -->
         <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
             <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full theme-bg-primary"></span>
@@ -10704,52 +10861,65 @@ FILE: .\app\templates\company\project_add.html
             </h3>
 
             <div class="grid grid-cols-3 gap-4">
+                <!-- A. Kapak Görseli -->
                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col justify-between space-y-3">
                     <div>
                         <label class="block text-[11px] font-black text-slate-800">Ana Kapak Görseli *</label>
                         <p class="text-[10px] text-slate-400 mt-0.5">Proje vitrininde görünecek ana görsel.</p>
                     </div>
-                    <div class="flex items-center gap-2.5">
-                        <input type="file" id="coverPhotoInput" name="kapak_fotografi" accept="image/*" required class="hidden" onchange="updateFileLabel(this, 'coverPhotoText')">
-                        <label for="coverPhotoInput" class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-xl theme-bg-primary theme-hover-bg text-white text-[11px] font-bold transition shadow-2xs active:scale-95 shrink-0">
-                            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <span>Dosya Seç</span>
-                        </label>
-                        <span id="coverPhotoText" class="text-[11px] text-slate-400 font-medium truncate">Seçilmedi</span>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2.5">
+                            <input type="file" id="coverPhotoInput" name="kapak_fotografi" accept="image/*" required class="hidden" onchange="handleSingleFilePreview(this, 'coverPhotoText', 'coverPreviewBox')">
+                            <label for="coverPhotoInput" class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-xl theme-bg-primary theme-hover-bg text-white text-[11px] font-bold transition shadow-2xs active:scale-95 shrink-0">
+                                <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                <span>Dosya Seç</span>
+                            </label>
+                            <span id="coverPhotoText" class="text-[11px] text-slate-400 font-medium truncate">Seçilmedi</span>
+                        </div>
+                        <div id="coverPreviewBox" class="flex flex-wrap gap-2 pt-1"></div>
                     </div>
                 </div>
 
+                <!-- B. Proje Galerisi -->
                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col justify-between space-y-3">
                     <div>
                         <label class="block text-[11px] font-black text-slate-800">Proje Galerisi / Renderlar</label>
                         <p class="text-[10px] text-slate-400 mt-0.5">İç mekan, peyzaj ve sosyal alan görselleri.</p>
                     </div>
-                    <div class="flex items-center gap-2.5">
-                        <input type="file" id="galleryPhotoInput" name="galeri_fotograflari" accept="image/*" multiple class="hidden" onchange="updateMultiFileLabel(this, 'galleryPhotoText')">
-                        <label for="galleryPhotoInput" class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-xl theme-bg-primary theme-hover-bg text-white text-[11px] font-bold transition shadow-2xs active:scale-95 shrink-0">
-                            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <span>Dosyaları Seç</span>
-                        </label>
-                        <span id="galleryPhotoText" class="text-[11px] text-slate-400 font-medium truncate">Seçilmedi</span>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2.5">
+                            <input type="file" id="galleryPhotoInput" name="galeri_fotograflari" accept="image/*" multiple class="hidden" onchange="handleMultiFilePreview(this, 'galleryPhotoText', 'galleryPreviewBox')">
+                            <label for="galleryPhotoInput" class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-xl theme-bg-primary theme-hover-bg text-white text-[11px] font-bold transition shadow-2xs active:scale-95 shrink-0">
+                                <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                <span>Dosyaları Seç</span>
+                            </label>
+                            <span id="galleryPhotoText" class="text-[11px] text-slate-400 font-medium truncate">Seçilmedi</span>
+                        </div>
+                        <div id="galleryPreviewBox" class="flex flex-wrap gap-2 pt-1 max-h-32 overflow-y-auto custom-scrollbar"></div>
                     </div>
                 </div>
 
+                <!-- C. Kat Planları -->
                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col justify-between space-y-3">
                     <div>
                         <label class="block text-[11px] font-black text-slate-800">Kat Planı Çizimleri</label>
                         <p class="text-[10px] text-slate-400 mt-0.5">Daire mimari plan çizimleri.</p>
                     </div>
-                    <div class="flex items-center gap-2.5">
-                        <input type="file" id="floorPlanInput" name="kat_plani_dosyalari" accept="image/*" multiple class="hidden" onchange="updateMultiFileLabel(this, 'floorPlanText')">
-                        <label for="floorPlanInput" class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-xl theme-bg-primary theme-hover-bg text-white text-[11px] font-bold transition shadow-2xs active:scale-95 shrink-0">
-                            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <span>Dosyaları Seç</span>
-                        </label>
-                        <span id="floorPlanText" class="text-[11px] text-slate-400 font-medium truncate">Seçilmedi</span>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2.5">
+                            <input type="file" id="floorPlanInput" name="kat_plani_dosyalari" accept="image/*" multiple class="hidden" onchange="handleMultiFilePreview(this, 'floorPlanText', 'floorPreviewBox')">
+                            <label for="floorPlanInput" class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-xl theme-bg-primary theme-hover-bg text-white text-[11px] font-bold transition shadow-2xs active:scale-95 shrink-0">
+                                <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                <span>Dosyaları Seç</span>
+                            </label>
+                            <span id="floorPlanText" class="text-[11px] text-slate-400 font-medium truncate">Seçilmedi</span>
+                        </div>
+                        <div id="floorPreviewBox" class="flex flex-wrap gap-2 pt-1 max-h-32 overflow-y-auto custom-scrollbar"></div>
                     </div>
                 </div>
             </div>
 
+            <!-- D. PDF Broşür -->
             <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-4">
                 <div>
                     <label class="block text-[11px] font-black text-slate-800">Proje Sunum Broşürü (PDF)</label>
@@ -10866,7 +11036,7 @@ FILE: .\app\templates\company\project_add.html
         <div>
             <div class="flex items-center justify-between pb-2 border-b border-slate-100">
                 <h3 id="locationDrawerTitle" class="text-xs font-black theme-text-dark uppercase tracking-tight">İl Seçiniz</h3>
-                <button type="button" onclick="closeLocationDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+                <button type="button" onclick="closeLocationDrawer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">✕</button>
             </div>
             
             <div class="mt-2.5">
@@ -10879,6 +11049,20 @@ FILE: .\app\templates\company\project_add.html
         <button type="button" onclick="closeLocationDrawer()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition mt-2 cursor-pointer">
             Vazgeç
         </button>
+    </div>
+</div>
+
+<!-- ================= YÜKLENEN GÖRSELİ BÜYÜTÜP İNCELEME MODALI (LIGHTBOX) ================= -->
+<div id="uploadPreviewModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex flex-col justify-between p-4 sm:p-6 select-none">
+    <div class="flex items-center justify-between text-white shrink-0 pb-3 border-b border-white/10">
+        <span class="text-xs font-black uppercase tracking-wider theme-text-primary">Görsel İnceleme & Kontrol</span>
+        <button type="button" onclick="closeUploadPreviewModal()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center transition cursor-pointer text-base">✕</button>
+    </div>
+    <div class="flex-1 flex items-center justify-center my-auto min-h-0 p-2">
+        <img id="uploadPreviewModalImg" src="" alt="Görsel Önizleme" class="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl">
+    </div>
+    <div class="text-center shrink-0 pt-2 text-[11px] text-slate-400 font-medium">
+        Fotoğrafı detaylı inceledikten sonra sağ üstteki butondan veya Esc tuşuna basarak kapatabilirsiniz.
     </div>
 </div>
 
@@ -10923,16 +11107,81 @@ FILE: .\app\templates\company\project_add.html
         }
     }
 
-    function updateMultiFileLabel(input, textId) {
+    // Tekil Dosya Önizleme (Kapak Görseli için)
+    function handleSingleFilePreview(input, textId, boxId) {
+        updateFileLabel(input, textId);
+        const box = document.getElementById(boxId);
+        box.innerHTML = '';
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const card = createPreviewThumbnail(e.target.result, file.name);
+                    box.appendChild(card);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    }
+
+    // Çoklu Dosya Önizleme (Galeri ve Kat Planları için)
+    function handleMultiFilePreview(input, textId, boxId) {
         const textEl = document.getElementById(textId);
+        const box = document.getElementById(boxId);
+        box.innerHTML = '';
+
         if (input.files && input.files.length > 0) {
             textEl.innerText = `${input.files.length} dosya seçildi`;
             textEl.className = 'text-[11px] font-bold text-slate-800 truncate';
+
+            Array.from(input.files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const card = createPreviewThumbnail(e.target.result, file.name);
+                        box.appendChild(card);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
         } else {
             textEl.innerText = 'Seçilmedi';
             textEl.className = 'text-[11px] text-slate-400 font-medium truncate';
         }
     }
+
+    // Büyütülebilir Küçük Resim Kartı
+    function createPreviewThumbnail(src, title) {
+        const wrapper = document.createElement('div');
+        wrapper.className = "relative h-16 w-16 rounded-xl overflow-hidden border border-slate-200 cursor-pointer shadow-2xs group shrink-0 bg-white";
+        wrapper.title = title || "Görseli büyüt";
+        wrapper.innerHTML = `
+            <img src="${src}" class="w-full h-full object-cover group-hover:scale-110 transition duration-200">
+            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[9px] font-black">
+                Büyüt
+            </div>
+        `;
+        wrapper.onclick = () => openUploadPreview(src);
+        return wrapper;
+    }
+
+    // Büyütme Modalı Kontrolleri
+    function openUploadPreview(src) {
+        document.getElementById('uploadPreviewModalImg').src = src;
+        document.getElementById('uploadPreviewModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeUploadPreviewModal() {
+        document.getElementById('uploadPreviewModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeUploadPreviewModal();
+    });
 
     let selectedFeaturesList = [];
 
@@ -11036,10 +11285,10 @@ FILE: .\app\templates\company\project_add.html
             optBtn.onclick = () => selectLocationItem(item);
 
             if (isSelected) {
-                optBtn.className = 'w-full flex items-center justify-between p-3 rounded-xl theme-bg-primary text-white font-black text-xs transition shadow-xs';
+                optBtn.className = 'w-full flex items-center justify-between p-3 rounded-xl theme-bg-primary text-white font-black text-xs transition shadow-xs cursor-pointer';
                 optBtn.innerHTML = `<span>${item}</span><span class="text-sm">✓</span>`;
             } else {
-                optBtn.className = 'w-full flex items-center justify-between p-3 rounded-xl bg-white hover:theme-bg-light text-slate-800 hover:theme-text-dark border border-slate-200/80 font-bold text-xs transition shadow-2xs';
+                optBtn.className = 'w-full flex items-center justify-between p-3 rounded-xl bg-white hover:theme-bg-light text-slate-800 hover:theme-text-dark border border-slate-200/80 font-bold text-xs transition shadow-2xs cursor-pointer';
                 optBtn.innerHTML = `<span>${item}</span>`;
             }
 
@@ -16303,96 +16552,443 @@ FILE: .\app\templates\projects\catalog.html
 {% block title %}Proje Satış Ağı - EMLAKMATCH{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto space-y-4 pb-16">
-    <!-- Üst Başlık & Tescillerim Butonu -->
-    <div class="flex items-center justify-between pt-2">
-        <div class="flex items-center gap-2">
-            <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/dashboard';}" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-200 transition">
-                ‹
-            </button>
+<div class="space-y-4 pb-20 max-w-md mx-auto">
+
+    <!-- Üst Başlık -->
+    <div class="pt-1 pb-2 border-b border-slate-200/80">
+        <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-base font-extrabold text-slate-900 tracking-tight">Proje Satış Ağı</h1>
-                <p class="text-[11px] text-slate-500 font-semibold">Müteahhit projelerinde doğrudan komisyon ortaklığı</p>
+                <h1 class="text-base font-black text-slate-900 tracking-tight">Proje Satış Ağı</h1>
+                <p class="text-[11px] text-slate-500">Müteahhit firmaların danışman ağına açtığı sıfır projeler</p>
             </div>
+            <span id="projectCountBadge" class="px-3 py-1 rounded-xl theme-bg-light theme-text-dark border theme-border-light text-xs font-black shrink-0 shadow-2xs">
+                {{ projects|length }} Proje
+            </span>
         </div>
-        <a href="/projects/my-registrations" class="text-[10px] font-black theme-text-dark theme-bg-light border theme-border-light hover:opacity-90 px-3 py-1.5 rounded-xl transition shadow-2xs">
-            Tescillerim ›
-        </a>
     </div>
 
-    <!-- İlçe Filtreleme Formu -->
-    <form action="/projects" method="GET" class="flex gap-2">
-        <input type="text" name="ilce" value="{{ selected_ilce }}" placeholder="İlçeye göre ara (Örn: Beykoz, Sarıyer)" 
-               class="flex-1 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:theme-border-primary shadow-2xs">
-        <button type="submit" class="theme-bg-primary theme-hover-bg text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition shadow-2xs active:scale-95">
-            Ara
-        </button>
-    </form>
+    <!-- 1. HIZLI İSİM ARAMA & FİLTRELE BUTONU -->
+    <div class="space-y-2">
+        <div class="flex items-center gap-2">
+            <!-- Proje Adı Arama Çubuğu -->
+            <div class="relative flex-1">
+                <input type="text" 
+                       id="projectSearchInput" 
+                       oninput="applyAllFilters()" 
+                       placeholder="Proje adı veya geliştirici ara..." 
+                       class="w-full pl-9 pr-3.5 py-2.5 bg-white border border-slate-200/90 rounded-2xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:theme-border-primary shadow-2xs transition">
+                <svg class="w-4 h-4 stroke-slate-400 absolute left-3 top-3" viewBox="0 0 24 24" fill="none" stroke-width="2.3">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
 
-    <!-- Proje Listesi -->
-    <div class="space-y-3">
+            <!-- Filtre Açma / Kapama Butonu -->
+            <button type="button" 
+                    onclick="toggleFilterPanel()" 
+                    id="filterToggleBtn"
+                    class="px-3.5 py-2.5 bg-white border border-slate-200/90 hover:theme-border-primary rounded-2xl text-xs font-black text-slate-700 shadow-2xs transition flex items-center gap-1.5 shrink-0 active:scale-95 cursor-pointer">
+                <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                <span>Filtrele</span>
+                <span id="activeFilterBadge" class="w-2 h-2 rounded-full theme-bg-primary hidden"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. GELİŞMİŞ FİLTRELEME PANELİ -->
+    <div id="filterAccordion" class="hidden bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <span class="text-[11px] font-black uppercase text-slate-700 tracking-wider">Arama Kriterlerini Daralt</span>
+            <button type="button" onclick="clearAllFilters()" class="text-[10px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer">
+                Filtreleri Temizle
+            </button>
+        </div>
+
+        <!-- İl & İlçe Seçimi -->
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">İl Seçimi</label>
+                <div class="relative">
+                    <select id="filterCity" onchange="handleCityChange()" class="w-full appearance-none px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition cursor-pointer pr-8">
+                        <option value="">Tüm İller</option>
+                        {% for city in turkey_data.keys()|sort %}
+                        <option value="{{ city }}">{{ city }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="pointer-events-none absolute right-3 top-3 text-[10px] text-slate-400">▾</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1">İlçe Seçimi</label>
+                <div class="relative">
+                    <select id="filterDistrict" onchange="applyAllFilters()" class="w-full appearance-none px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition cursor-pointer pr-8">
+                        <option value="">Önce İl Seçiniz</option>
+                    </select>
+                    <span class="pointer-events-none absolute right-3 top-3 text-[10px] text-slate-400">▾</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gayrimenkul Tipi (5 Standart Tip) -->
+        <div>
+            <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1.5">Gayrimenkul Tipi</label>
+            <div class="grid grid-cols-5 gap-1 text-center">
+                {% for ptype in ["Konut", "Villa", "Ticari", "Arsa", "Diğer"] %}
+                <button type="button" 
+                        onclick="toggleTypeFilter('{{ ptype }}', this)" 
+                        class="type-filter-chip py-2 px-1 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-xl text-[11px] font-extrabold text-slate-700 transition cursor-pointer">
+                    {{ ptype }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Bütçe Aralığı -->
+        <div>
+            <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1.5">Maksimum Bütçe (TL)</label>
+            <input type="text" id="filterMaxPrice" oninput="formatAndFilterPrice(this)" placeholder="Örn: 20.000.000" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:theme-border-primary transition">
+            <input type="hidden" id="realMaxPrice" value="0">
+        </div>
+
+        <!-- Daire / Ünite Tipleri (Çoklu Seçim) -->
+        <div>
+            <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1.5">Daire / Ünite Tipi</label>
+            <div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto custom-scrollbar p-2 bg-slate-50 border border-slate-200/90 rounded-2xl">
+                {% for ut in ["1+0 Stüdyo", "1+1 Daire", "2+1 Daire", "3+1 Daire", "4+1 Daire", "5+1 ve Üzeri", "Çatı Dubleksi", "Bahçe Dubleksi", "Penthouse", "Müstakil Villa", "Ofis / Ticari"] %}
+                <button type="button" 
+                        onclick="toggleUnitFilter('{{ ut }}', this)" 
+                        class="unit-filter-chip px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 hover:theme-border-primary transition cursor-pointer shadow-2xs">
+                    + {{ ut }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Donatılar / Nitelikler -->
+        <div>
+            <label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-1.5">Öne Çıkan Donatılar</label>
+            <div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto custom-scrollbar p-2 bg-slate-50 border border-slate-200/90 rounded-2xl">
+                {% for f in ["Site İçi", "7/24 Güvenlik", "Kapalı Otopark", "Açık Havuz", "Kapalı Havuz", "Fitness / Spor Salonu", "Yerden Isıtma", "Deniz Manzarası", "Metroya Yakın"] %}
+                <button type="button" 
+                        onclick="toggleFeatureFilter('{{ f }}', this)" 
+                        class="feat-filter-chip px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 hover:theme-border-primary transition cursor-pointer shadow-2xs">
+                    + {{ f }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. PROJELER LİSTESİ -->
+    <div id="projectCardsContainer" class="space-y-4">
         {% if projects and projects|length > 0 %}
-            {% for p in projects %}
-            <div class="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-2xs hover:shadow-md transition">
-                <!-- Tıklanabilir Kapak Görseli -->
-                <a href="/projects/detail/{{ p.id }}" class="block h-36 bg-slate-100 relative group overflow-hidden">
-                    <img src="{{ p.kapak_fotografi or 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80' }}" 
-                         alt="{{ p.ad }}" 
-                         class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                    <span class="absolute top-2 left-2 theme-bg-primary text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-sm">
-                        %{{ p.partner_komisyon_orani }} Net Komisyon
-                    </span>
-                    <span class="absolute top-2 right-2 bg-white/95 text-slate-800 text-[10px] font-extrabold px-2 py-0.5 rounded-lg shadow-sm">
-                        {{ p.proje_tipi }}
-                    </span>
-                </a>
+            {% for project in projects %}
+            {% set dev_name = project.users.sirket_unvani if (project.users and project.users.sirket_unvani) else (project.users.ad_soyad if project.users else 'Müteahhit Firma') %}
+            
+            <div class="project-item-card bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-2xs hover:border-slate-300 transition duration-200 flex flex-col"
+                 data-title="{{ project.ad or '' }}"
+                 data-developer="{{ dev_name or '' }}"
+                 data-city="{{ project.il or 'İstanbul' }}"
+                 data-district="{{ project.ilce or '' }}"
+                 data-type="{{ project.proje_tipi or 'Konut' }}"
+                 data-min-price="{{ project.min_fiyat or 0 }}"
+                 data-max-price="{{ project.max_fiyat or 0 }}"
+                 data-description="{{ project.aciklama or '' }}">
 
-                <div class="p-4 space-y-2.5">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <!-- Tıklanabilir Başlık -->
-                            <a href="/projects/detail/{{ p.id }}" class="text-sm font-extrabold text-slate-900 hover:theme-text-primary transition block">
-                                {{ p.ad }}
-                            </a>
-                            <span class="text-[11px] font-bold text-slate-500">📍 {{ p.ilce }}, {{ p.il }}</span>
+                <!-- Kapak Görseli ve Komisyon Rozeti -->
+                <div class="relative h-44 w-full bg-slate-100 overflow-hidden">
+                    <img src="{{ project.kapak_fotografi or 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80' }}" 
+                         alt="{{ project.ad }}" 
+                         class="w-full h-full object-cover">
+                    
+                    <!-- Net Komisyon Rozeti -->
+                    <div class="absolute top-3 left-3 theme-bg-primary text-white font-black text-[11px] px-3 py-1 rounded-xl shadow-md border border-white/20">
+                        %{{ project.partner_komisyon_orani or 3.0 }} Net Komisyon
+                    </div>
+
+                    <!-- Proje Tipi Rozeti -->
+                    <div class="absolute top-3 right-3 bg-white/95 backdrop-blur-xs text-slate-900 font-extrabold text-[10px] px-2.5 py-1 rounded-xl shadow-md border border-slate-200">
+                        {{ project.proje_tipi or 'Konut' }}
+                    </div>
+                </div>
+
+                <!-- Proje Bilgileri -->
+                <div class="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <h3 class="text-sm font-black text-slate-900 tracking-tight">{{ project.ad }}</h3>
+                                <p class="text-[11px] text-slate-500 font-semibold mt-0.5 flex items-center gap-1">
+                                    <svg class="w-3 h-3 theme-text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke-width="2.2">
+                                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+                                    </svg>
+                                    <span>{{ project.ilce }}, {{ project.il or 'İstanbul' }}</span>
+                                </p>
+                            </div>
+                            <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md theme-bg-light theme-text-dark border theme-border-light">
+                                {{ project.durum or 'Aktif' }}
+                            </span>
                         </div>
-                        <div class="text-right">
-                            <span class="text-[10px] text-slate-400 block font-semibold">Fiyat Aralığı</span>
-                            <span class="text-xs font-extrabold text-slate-900 block">
-                                {{ '{:,}'.format(p.min_fiyat).replace(',', '.') }} - {{ '{:,}'.format(p.max_fiyat).replace(',', '.') }} TL
+
+                        <!-- Fiyat Aralığı -->
+                        <div class="mt-3 p-2.5 theme-bg-light border theme-border-light rounded-xl flex items-center justify-between">
+                            <span class="text-[10px] font-bold theme-text-dark uppercase tracking-wide">Fiyat Aralığı</span>
+                            <span class="text-xs font-black theme-text-dark">
+                                {{ '{:,}'.format(project.min_fiyat).replace(',', '.') }} - {{ '{:,}'.format(project.max_fiyat).replace(',', '.') }} TL
                             </span>
                         </div>
                     </div>
 
-                    <p class="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
-                        {{ p.aciklama.split('[DAIRE_TIPLERI]:')[0].strip() if p.aciklama else 'Proje detayları, teslim tarihi ve daire planları için inceleyebilirsiniz.' }}
-                    </p>
-
-                    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <span class="text-[10px] font-bold text-slate-400">
-                            Geliştirici: {{ p.users.sirket_unvani if p.users and p.users.sirket_unvani else 'Proje Firması' }}
-                        </span>
-                        <div class="flex items-center gap-2">
-                            <a href="/projects/detail/{{ p.id }}" 
-                               class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs px-3 py-1.5 rounded-xl transition">
-                                Detay ›
-                            </a>
-                            <a href="/projects/{{ p.id }}/register-client" 
-                               class="theme-bg-primary theme-hover-bg text-white font-extrabold text-xs px-3.5 py-1.5 rounded-xl transition shadow-2xs active:scale-95">
-                                Müşteri Tescil Et ›
-                            </a>
+                    <!-- Geliştirici Bilgisi & İncele Butonu -->
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <span class="text-[9px] font-extrabold text-slate-400 uppercase block">Geliştirici</span>
+                            <span class="text-[11px] font-black text-slate-800 truncate block">{{ dev_name }}</span>
                         </div>
+
+                        <a href="/projects/detail/{{ project.id }}" 
+                           class="px-3.5 py-2 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-xl shadow-2xs active:scale-95 transition shrink-0 flex items-center gap-1">
+                            <span>İncele</span>
+                            <span>›</span>
+                        </a>
                     </div>
                 </div>
+
             </div>
             {% endfor %}
         {% else %}
-            <div class="bg-white rounded-3xl border border-slate-200 p-8 text-center text-xs text-slate-400">
-                Arama kriterlerinize uygun aktif proje bulunamadı.
+            <div class="bg-white rounded-3xl border border-slate-200/90 p-12 text-center space-y-2 shadow-2xs">
+                <h3 class="text-xs font-black text-slate-700">Yayında Proje Bulunmuyor</h3>
+                <p class="text-[11px] text-slate-400 max-w-xs mx-auto">Müteahhit firmalar projelerini sisteme yükledikçe burada listelenecektir.</p>
             </div>
         {% endif %}
     </div>
+
+    <!-- Sonuç Bulunamadı Kartı -->
+    <div id="noResultsCard" class="hidden bg-white rounded-3xl border border-slate-200/90 p-12 text-center space-y-3 shadow-2xs">
+        <div class="w-10 h-10 rounded-2xl theme-bg-light theme-text-dark mx-auto flex items-center justify-center font-bold text-base border theme-border-light">
+            ✕
+        </div>
+        <h3 class="text-xs font-black text-slate-800">Kriterlere Uygun Proje Bulunamadı</h3>
+        <p class="text-[11px] text-slate-400 max-w-xs mx-auto">Arama kriterlerinizi genişleterek veya filtreleri sıfırlayarak tekrar deneyebilirsiniz.</p>
+        <button type="button" onclick="clearAllFilters()" class="px-4 py-2 theme-bg-primary text-white text-xs font-bold rounded-xl active:scale-95 transition cursor-pointer">
+            Filtreleri Temizle
+        </button>
+    </div>
+
 </div>
+
+<!-- İl / İlçe Verisini Güvenli JSON Bloğunda Tutuyoruz -->
+<script type="application/json" id="turkeyDataJson">
+    {{ turkey_data|tojson }}
+</script>
+
+<script>
+    let turkeyData = {};
+    try {
+        const rawJson = document.getElementById('turkeyDataJson').textContent;
+        turkeyData = JSON.parse(rawJson);
+    } catch (e) {
+        console.error("Türkiye il-ilçe verisi ayrıştırılamadı:", e);
+    }
+
+    let selectedTypes = [];
+    let selectedUnits = [];
+    let selectedFeatures = [];
+
+    function trNormalize(str) {
+        if (!str) return '';
+        return String(str)
+            .trim()
+            .replace(/İ/g, 'i')
+            .replace(/I/g, 'ı')
+            .toLocaleLowerCase('tr');
+    }
+
+    function toggleFilterPanel() {
+        const panel = document.getElementById('filterAccordion');
+        panel.classList.toggle('hidden');
+    }
+
+    function handleCityChange() {
+        const citySelect = document.getElementById('filterCity');
+        const districtSelect = document.getElementById('filterDistrict');
+        const selectedCity = citySelect.value;
+
+        districtSelect.innerHTML = '<option value="">Tüm İlçeler</option>';
+
+        if (selectedCity && turkeyData[selectedCity]) {
+            turkeyData[selectedCity].forEach(district => {
+                const opt = document.createElement('option');
+                opt.value = district;
+                opt.textContent = district;
+                districtSelect.appendChild(opt);
+            });
+        }
+        applyAllFilters();
+    }
+
+    function toggleTypeFilter(typeVal, btn) {
+        const normVal = trNormalize(typeVal);
+        const idx = selectedTypes.indexOf(normVal);
+        if (idx > -1) {
+            selectedTypes.splice(idx, 1);
+            btn.className = "type-filter-chip py-2 px-1 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-xl text-[11px] font-extrabold text-slate-700 transition cursor-pointer";
+        } else {
+            selectedTypes.push(normVal);
+            btn.className = "type-filter-chip py-2 px-1 theme-bg-primary text-white border theme-border-primary rounded-xl text-[11px] font-extrabold transition cursor-pointer shadow-2xs";
+        }
+        applyAllFilters();
+    }
+
+    function toggleUnitFilter(unitVal, btn) {
+        const normVal = trNormalize(unitVal);
+        const idx = selectedUnits.indexOf(normVal);
+        if (idx > -1) {
+            selectedUnits.splice(idx, 1);
+            btn.className = "unit-filter-chip px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 hover:theme-border-primary transition cursor-pointer shadow-2xs";
+            btn.innerText = `+ ${unitVal}`;
+        } else {
+            selectedUnits.push(normVal);
+            btn.className = "unit-filter-chip px-2.5 py-1.5 theme-bg-primary text-white border theme-border-primary rounded-xl text-[10px] font-black transition cursor-pointer shadow-2xs";
+            btn.innerText = `✓ ${unitVal}`;
+        }
+        applyAllFilters();
+    }
+
+    function toggleFeatureFilter(featVal, btn) {
+        const normVal = trNormalize(featVal);
+        const idx = selectedFeatures.indexOf(normVal);
+        if (idx > -1) {
+            selectedFeatures.splice(idx, 1);
+            btn.className = "feat-filter-chip px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 hover:theme-border-primary transition cursor-pointer shadow-2xs";
+            btn.innerText = `+ ${featVal}`;
+        } else {
+            selectedFeatures.push(normVal);
+            btn.className = "feat-filter-chip px-2.5 py-1.5 theme-bg-primary text-white border theme-border-primary rounded-xl text-[10px] font-black transition cursor-pointer shadow-2xs";
+            btn.innerText = `✓ ${featVal}`;
+        }
+        applyAllFilters();
+    }
+
+    function formatAndFilterPrice(input) {
+        let raw = input.value.replace(/\D/g, '');
+        document.getElementById('realMaxPrice').value = raw || '0';
+        input.value = raw ? Number(raw).toLocaleString('tr-TR') : '';
+        applyAllFilters();
+    }
+
+    function applyAllFilters() {
+        const query = trNormalize(document.getElementById('projectSearchInput').value);
+        const cityFilter = trNormalize(document.getElementById('filterCity').value);
+        const districtFilter = trNormalize(document.getElementById('filterDistrict').value);
+        const maxPrice = Number(document.getElementById('realMaxPrice').value || 0);
+
+        const cards = document.querySelectorAll('.project-item-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const title = trNormalize(card.getAttribute('data-title'));
+            const dev = trNormalize(card.getAttribute('data-developer'));
+            const city = trNormalize(card.getAttribute('data-city'));
+            const district = trNormalize(card.getAttribute('data-district'));
+            const ptype = trNormalize(card.getAttribute('data-type'));
+            const minPrice = Number(card.getAttribute('data-min-price') || 0);
+            const desc = trNormalize(card.getAttribute('data-description'));
+
+            let matchesQuery = true;
+            if (query) {
+                matchesQuery = title.includes(query) || dev.includes(query);
+            }
+
+            let matchesCity = true;
+            if (cityFilter) {
+                matchesCity = (city === cityFilter) || city.includes(cityFilter) || cityFilter.includes(city);
+            }
+
+            let matchesDistrict = true;
+            if (districtFilter) {
+                matchesDistrict = (district === districtFilter) || district.includes(districtFilter) || districtFilter.includes(district);
+            }
+
+            let matchesType = true;
+            if (selectedTypes.length > 0) {
+                matchesType = selectedTypes.some(t => ptype.includes(t) || t.includes(ptype));
+            }
+
+            let matchesPrice = true;
+            if (maxPrice > 0) {
+                matchesPrice = minPrice <= maxPrice;
+            }
+
+            let matchesUnits = true;
+            if (selectedUnits.length > 0) {
+                matchesUnits = selectedUnits.some(u => desc.includes(u));
+            }
+
+            let matchesFeatures = true;
+            if (selectedFeatures.length > 0) {
+                matchesFeatures = selectedFeatures.every(f => desc.includes(f));
+            }
+
+            if (matchesQuery && matchesCity && matchesDistrict && matchesType && matchesPrice && matchesUnits && matchesFeatures) {
+                card.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('projectCountBadge').innerText = `${visibleCount} Proje`;
+        const noResults = document.getElementById('noResultsCard');
+        if (visibleCount === 0) {
+            noResults.classList.remove('hidden');
+        } else {
+            noResults.classList.add('hidden');
+        }
+
+        const hasActiveFilters = query || cityFilter || districtFilter || maxPrice > 0 || selectedTypes.length > 0 || selectedUnits.length > 0 || selectedFeatures.length > 0;
+        const activeDot = document.getElementById('activeFilterBadge');
+        if (hasActiveFilters) {
+            activeDot.classList.remove('hidden');
+        } else {
+            activeDot.classList.add('hidden');
+        }
+    }
+
+    function clearAllFilters() {
+        document.getElementById('projectSearchInput').value = '';
+        document.getElementById('filterCity').value = '';
+        document.getElementById('filterDistrict').innerHTML = '<option value="">Önce İl Seçiniz</option>';
+        document.getElementById('filterMaxPrice').value = '';
+        document.getElementById('realMaxPrice').value = '0';
+
+        selectedTypes = [];
+        selectedUnits = [];
+        selectedFeatures = [];
+
+        document.querySelectorAll('.type-filter-chip').forEach(btn => {
+            btn.className = "type-filter-chip py-2 px-1 bg-slate-50 border border-slate-200 hover:theme-border-primary rounded-xl text-[11px] font-extrabold text-slate-700 transition cursor-pointer";
+        });
+
+        document.querySelectorAll('.unit-filter-chip').forEach(btn => {
+            const rawText = btn.innerText.replace('✓', '').replace('+', '').trim();
+            btn.className = "unit-filter-chip px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 hover:theme-border-primary transition cursor-pointer shadow-2xs";
+            btn.innerText = `+ ${rawText}`;
+        });
+
+        document.querySelectorAll('.feat-filter-chip').forEach(btn => {
+            const rawText = btn.innerText.replace('✓', '').replace('+', '').trim();
+            btn.className = "feat-filter-chip px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 hover:theme-border-primary transition cursor-pointer shadow-2xs";
+            btn.innerText = `+ ${rawText}`;
+        });
+
+        applyAllFilters();
+    }
+</script>
 {% endblock %}
 
 ======================================================================
@@ -16425,23 +17021,30 @@ FILE: .\app\templates\projects\detail.html
     {% set features_list = f_parts[1].split(',') %}
 {% endif %}
 
+{% set cover_img = project.kapak_fotografi or 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80' %}
+{% set gallery_imgs = project.galeri if (project.galeri and project.galeri is iterable and not project.galeri is string) else [] %}
+{% set floor_plans = project.kat_planlari if (project.kat_planlari and project.kat_planlari is iterable and not project.kat_planlari is string) else [] %}
+
 <div class="space-y-4 pb-12 max-w-md mx-auto">
     <!-- Üst Bar -->
     <div class="flex items-center justify-between pt-1 pb-2 border-b border-slate-200/80">
-        <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/projects';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition">
+        <button type="button" onclick="if(document.referrer){history.back();}else{window.location.href='/projects';}" class="p-1 -ml-1 text-slate-500 hover:text-slate-800 transition cursor-pointer">
             <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <h1 class="text-sm font-black text-slate-900 tracking-tight truncate max-w-[220px]">{{ project.ad }}</h1>
         <div class="w-6"></div>
     </div>
 
-    <!-- 1. VİTRİN GÖRSELİ & KOMİSYON ETİKETİ -->
-    <div class="relative w-full h-56 rounded-3xl overflow-hidden bg-slate-100 border border-slate-200 shadow-2xs">
-        <img src="{{ project.kapak_fotografi or 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80' }}" 
+    <!-- 1. VİTRİN GÖRSELİ & BÜYÜTME TETİKLEYİCİ -->
+    <div class="relative w-full h-60 rounded-3xl overflow-hidden bg-slate-100 border border-slate-200 shadow-2xs group cursor-pointer" 
+         data-lb-category="cover" 
+         data-lb-index="0" 
+         onclick="handleLightboxTrigger(this)">
+        <img src="{{ cover_img }}" 
              alt="{{ project.ad }}" 
-             class="w-full h-full object-cover">
+             class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
         
-        <!-- Net Komisyon Rozeti (Dinamik Tema Uyumlu) -->
+        <!-- Net Komisyon Rozeti -->
         <div class="absolute top-3 left-3 theme-bg-primary text-white font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 border border-white/20">
             <span>%{{ project.partner_komisyon_orani or 3.0 }} Net Danışman Komisyonu</span>
         </div>
@@ -16450,9 +17053,62 @@ FILE: .\app\templates\projects\detail.html
         <div class="absolute top-3 right-3 bg-white/95 backdrop-blur-xs text-slate-900 font-extrabold text-[10px] px-2.5 py-1 rounded-xl shadow-md border border-slate-200">
             {{ project.proje_tipi or 'Konut' }}
         </div>
+
+        <!-- Görsel Büyütme İpucu Butonu -->
+        <div class="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-bold flex items-center gap-1.5 border border-white/10 shadow-lg">
+            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            <span>Fotoğrafları İncele</span>
+        </div>
     </div>
 
-    <!-- 2. PROJE BİLGİ KARTI & FİYAT -->
+    <!-- 2. PROJE FOTOĞRAF GALERİSİ -->
+    {% if gallery_imgs and gallery_imgs|length > 0 %}
+    <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-3">
+        <div class="flex items-center justify-between">
+            <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Proje Fotoğraf Galerisi</span>
+            <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{{ gallery_imgs|length }} Görsel</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+            {% for g_img in gallery_imgs %}
+            <div class="relative h-24 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 cursor-pointer group shadow-2xs" 
+                 data-lb-category="gallery" 
+                 data-lb-index="{{ loop.index0 }}" 
+                 onclick="handleLightboxTrigger(this)">
+                <img src="{{ g_img }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-200">
+                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs">
+                    <svg class="w-4 h-4 stroke-current drop-shadow-md" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 3. KAT VE MİMARİ PLANLAR -->
+    {% if floor_plans and floor_plans|length > 0 %}
+    <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-3">
+        <div class="flex items-center justify-between">
+            <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Kat & Mimari Planlar</span>
+            <span class="text-[10px] font-bold theme-text-dark theme-bg-light px-2 py-0.5 rounded-md border theme-border-light">{{ floor_plans|length }} Plan</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            {% for f_plan in floor_plans %}
+            <div class="relative h-28 rounded-2xl overflow-hidden bg-slate-50 border border-slate-200 cursor-pointer group p-1 flex items-center justify-center shadow-2xs" 
+                 data-lb-category="plans" 
+                 data-lb-index="{{ loop.index0 }}" 
+                 onclick="handleLightboxTrigger(this)">
+                <img src="{{ f_plan }}" class="w-full h-full object-contain group-hover:scale-105 transition duration-200">
+                <div class="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1 backdrop-blur-2xs">
+                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                    <span>Planı İncele</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 4. PROJE BİLGİ KARTI & FİYAT -->
     <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4">
         <div class="flex items-start justify-between gap-2">
             <div>
@@ -16494,7 +17150,7 @@ FILE: .\app\templates\projects\detail.html
         </div>
     </div>
 
-    <!-- 3. DAİRE / ÜNİTE TİPLERİ -->
+    <!-- 5. DAİRE / ÜNİTE TİPLERİ -->
     {% if unit_types and unit_types|length > 0 %}
     <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-2.5">
         <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Satışta Olan Daire / Ünite Tipleri</span>
@@ -16510,7 +17166,7 @@ FILE: .\app\templates\projects\detail.html
     </div>
     {% endif %}
 
-    <!-- 4. GELİŞTİRİCİ / MÜTEAHHİT KARTI -->
+    <!-- 6. GELİŞTİRİCİ / MÜTEAHHİT KARTI -->
     <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-3">
         <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Proje Geliştiricisi / Müteahhit</span>
         
@@ -16531,7 +17187,7 @@ FILE: .\app\templates\projects\detail.html
         </div>
     </div>
 
-    <!-- 5. PROJE AÇIKLAMASI -->
+    <!-- 7. PROJE AÇIKLAMASI -->
     {% if clean_desc %}
     <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-2">
         <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Proje Açıklaması</span>
@@ -16541,7 +17197,7 @@ FILE: .\app\templates\projects\detail.html
     </div>
     {% endif %}
 
-    <!-- 6. PROJE NİTELİKLERİ & DONATILARI (DİNAMİK TEMA ROZETLERİ) -->
+    <!-- 8. PROJE DONATILARI -->
     {% if features_list and features_list|length > 0 %}
     <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-2.5">
         <div class="flex items-center justify-between">
@@ -16561,7 +17217,7 @@ FILE: .\app\templates\projects\detail.html
     </div>
     {% endif %}
 
-    <!-- 7. BROŞÜR İNDİRME BAĞLANTISI -->
+    <!-- 9. BROŞÜR BAĞLANTISI -->
     {% if project.brosur_url %}
     <div class="bg-white rounded-3xl p-4 border border-slate-200/90 shadow-2xs">
         <a href="{{ project.brosur_url }}" target="_blank" class="flex items-center justify-between text-xs font-bold text-slate-800 hover:theme-text-primary transition">
@@ -16576,7 +17232,7 @@ FILE: .\app\templates\projects\detail.html
     </div>
     {% endif %}
 
-    <!-- 8. ALT AKSİYON BUTONLARI -->
+    <!-- 10. ALT AKSİYON BUTONLARI -->
     <div class="pt-2">
         {% if is_owner %}
         <a href="/company/registrations" class="w-full py-4 theme-bg-primary theme-hover-bg text-white font-black text-xs rounded-2xl transition shadow-md flex items-center justify-center gap-1.5 active:scale-[0.99]">
@@ -16591,6 +17247,140 @@ FILE: .\app\templates\projects\detail.html
         {% endif %}
     </div>
 </div>
+
+<!-- ================= TAM EKRAN FOTOĞRAF İNCELEME & LIGHTBOX MODALI ================= -->
+<div id="imageLightboxModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md hidden flex flex-col justify-between p-4 sm:p-6 select-none transition-opacity duration-200">
+    
+    <!-- Üst Bar: Başlık, Sayaç ve Kapat Butonu -->
+    <div class="flex items-center justify-between text-white shrink-0 pb-3 border-b border-white/10">
+        <div class="flex items-center gap-2">
+            <span id="lightboxCategoryLabel" class="text-xs font-black uppercase tracking-wider theme-text-primary">Görsel</span>
+            <span id="lightboxIndexCounter" class="text-xs font-mono text-slate-400">1 / 1</span>
+        </div>
+        <button type="button" onclick="closeLightbox()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center transition cursor-pointer text-base">
+            ✕
+        </button>
+    </div>
+
+    <!-- Orta Alan: Büyütülmüş Fotoğraf ve Sol/Sağ Oklar -->
+    <div class="relative flex-1 flex items-center justify-center my-auto min-h-0">
+        <button type="button" onclick="prevLightboxImage()" class="absolute left-2 sm:left-4 z-10 w-11 h-11 rounded-2xl bg-black/50 hover:bg-black/80 text-white flex items-center justify-center border border-white/15 transition cursor-pointer backdrop-blur-sm shadow-xl active:scale-95">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+
+        <div class="w-full h-full flex items-center justify-center p-2">
+            <img id="lightboxMainImage" 
+                 src="" 
+                 alt="Büyük Görsel" 
+                 class="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl transition duration-200">
+        </div>
+
+        <button type="button" onclick="nextLightboxImage()" class="absolute right-2 sm:right-4 z-10 w-11 h-11 rounded-2xl bg-black/50 hover:bg-black/80 text-white flex items-center justify-center border border-white/15 transition cursor-pointer backdrop-blur-sm shadow-xl active:scale-95">
+            <svg class="w-6 h-6 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+    </div>
+
+    <!-- Alt Çubuk: İpucu -->
+    <div class="text-center shrink-0 pt-2 text-[11px] text-slate-400 font-medium">
+        Fotoğraflar arasında geçiş yapmak için oklara tıklayabilir veya klavye ok tuşlarını kullanabilirsiniz.
+    </div>
+</div>
+
+<!-- Güvenli JSON Veri Blokları (JS Sözdizimi Çakışmalarını Önler) -->
+<script type="application/json" id="lbCoverData">
+    {{ cover_img|tojson }}
+</script>
+<script type="application/json" id="lbGalleryData">
+    {{ gallery_imgs|tojson }}
+</script>
+<script type="application/json" id="lbPlansData">
+    {{ floor_plans|tojson }}
+</script>
+
+<script>
+    let coverImage = "";
+    let galleryImages = [];
+    let floorPlanImages = [];
+
+    try {
+        coverImage = JSON.parse(document.getElementById('lbCoverData').textContent);
+        galleryImages = JSON.parse(document.getElementById('lbGalleryData').textContent) || [];
+        floorPlanImages = JSON.parse(document.getElementById('lbPlansData').textContent) || [];
+    } catch (e) {
+        console.error("Görsel verisi ayrıştırılamadı:", e);
+    }
+
+    let currentImageList = [];
+    let currentImageIndex = 0;
+    let currentCategoryName = 'Görsel';
+
+    function handleLightboxTrigger(element) {
+        const category = element.getAttribute('data-lb-category');
+        const index = parseInt(element.getAttribute('data-lb-index') || '0', 10);
+        openLightbox(category, index);
+    }
+
+    function openLightbox(category, index) {
+        if (category === 'cover') {
+            currentImageList = [coverImage];
+            currentCategoryName = 'Kapak Fotoğrafı';
+            currentImageIndex = 0;
+        } else if (category === 'gallery') {
+            currentImageList = galleryImages.length > 0 ? galleryImages : [coverImage];
+            currentCategoryName = 'Proje Galerisi';
+            currentImageIndex = index;
+        } else if (category === 'plans') {
+            currentImageList = floorPlanImages;
+            currentCategoryName = 'Kat Planı';
+            currentImageIndex = index;
+        }
+
+        updateLightboxView();
+        document.getElementById('imageLightboxModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        document.getElementById('imageLightboxModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    function updateLightboxView() {
+        if (currentImageList.length === 0) return;
+        const mainImg = document.getElementById('lightboxMainImage');
+        const counter = document.getElementById('lightboxIndexCounter');
+        const catLabel = document.getElementById('lightboxCategoryLabel');
+
+        mainImg.src = currentImageList[currentImageIndex];
+        counter.innerText = `${currentImageIndex + 1} / ${currentImageList.length}`;
+        catLabel.innerText = currentCategoryName;
+    }
+
+    function nextLightboxImage() {
+        if (currentImageList.length <= 1) return;
+        currentImageIndex = (currentImageIndex + 1) % currentImageList.length;
+        updateLightboxView();
+    }
+
+    function prevLightboxImage() {
+        if (currentImageList.length <= 1) return;
+        currentImageIndex = (currentImageIndex - 1 + currentImageList.length) % currentImageList.length;
+        updateLightboxView();
+    }
+
+    window.addEventListener('keydown', (e) => {
+        const modal = document.getElementById('imageLightboxModal');
+        if (modal.classList.contains('hidden')) return;
+
+        if (e.key === 'Escape') {
+            closeLightbox();
+        } else if (e.key === 'ArrowRight') {
+            nextLightboxImage();
+        } else if (e.key === 'ArrowLeft') {
+            prevLightboxImage();
+        }
+    });
+</script>
 {% endblock %}
 
 ======================================================================

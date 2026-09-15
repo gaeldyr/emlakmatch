@@ -200,156 +200,97 @@ def get_collaboration_detail(request: Request, collab_id: str, user_id: str = Co
         }
     )
 
-# ================= 3. TEKLİF GÖNDERME & YANITLAMA & ŞART DÜZENLEME =================
+# ================= 3. TEKLİF GÖNDERME & YANITLAMA =================
 @router.post("/send")
+@router.post("/request")
+@router.post("/create")
 def post_send_collaboration(
-    ilgili_ilan_id: str = Form(...),
-    target_owner_id: str = Form(...),
-    isbirligi_kosulu: str = Form(...),
+    request: Request,
+    ilgili_ilan_id: str = Form(None),
+    portfolio_id: str = Form(None),
+    target_owner_id: str = Form(None),
+    talep_alan_id: str = Form(None),
+    isbirligi_kosulu: str = Form(None),
+    komisyon_paylasimi: str = Form(None),
     talep_tipi: str = Form("İşbirliği Talebi"),
-    notlar: str = Form(""),
+    notlar: str = Form(None),
     user_id: str = Cookie(None)
 ):
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
     clean_user_id = str(user_id).strip()
-    clean_target_id = str(target_owner_id).strip()
+    
+    # 1. Alanları her iki ihtimale karşı eşleştir
+    final_port_id = str(portfolio_id or ilgili_ilan_id or "").strip()
+    final_target_id = str(talep_alan_id or target_owner_id or "").strip()
+    final_terms = str(isbirligi_kosulu or komisyon_paylasimi or "%50 - %50 Standart Paylaşım").strip()
 
-    if is_relationship_blocked(clean_user_id, clean_target_id):
+    # Eğer hedef danışman ID'si formdan gelmediyse ilanın sahibini çek
+    if not final_target_id and final_port_id:
+        try:
+            p_chk = supabase.table("portfolios").select("porfoy_sahibi_id").eq("id", final_port_id).single().execute()
+            if p_chk.data:
+                final_target_id = str(p_chk.data.get("porfoy_sahibi_id") or "").strip()
+        except Exception as e_chk:
+            print(f"[PORTFÖY SAHİBİ ÇEKME HATASI]: {e_chk}")
+
+    if not final_port_id or not final_target_id:
+        print(f"[TEKLİF RET]: Eksik veri -> port_id: {final_port_id}, target_id: {final_target_id}")
+        return RedirectResponse(url="/collaborations/my?tab=bekleyen&err=missing_ids", status_code=303)
+
+    # Kendi kendine teklif verme kontrolü
+    if clean_user_id == final_target_id:
+        print("[TEKLİF RET]: Kullanıcı kendi portföyüne teklif veremez.")
+        return RedirectResponse(url="/collaborations/my?tab=bekleyen&err=self_collab", status_code=303)
+
+    if is_relationship_blocked(clean_user_id, final_target_id):
         return RedirectResponse(url="/dashboard?error=blocked", status_code=303)
 
+    # 2. Şema-Korumalı Veritabanı Kaydı
+    payload = {
+        "ilgili_ilan_id": final_port_id,
+        "talep_gonderen_id": clean_user_id,
+        "talep_alan_id": final_target_id,
+        "talep_tipi": talep_tipi,
+        "isbirligi_kosulu": final_terms,
+        "durum": "Beklemede"
+    }
+    
     try:
-        supabase.table("collaboration_requests").insert({
-            "ilgili_ilan_id": ilgili_ilan_id,
-            "talep_gonderen_id": clean_user_id,
-            "talep_alan_id": clean_target_id,
-            "talep_tipi": talep_tipi,
-            "isbirligi_kosulu": isbirligi_kosulu.strip(),
-            "durum": "Beklemede"
-        }).execute()
+        # Önce 'notlar' alanı varsa eklemeyi dener
+        if notlar and str(notlar).strip():
+            payload["notlar"] = str(notlar).strip()
+        
+        supabase.table("collaboration_requests").insert(payload).execute()
+        print(f"[İŞBİRLİĞİ KAYDEDİLDİ]: Gönderen {clean_user_id} -> Alan {final_target_id}")
 
+    except Exception as insert_err:
+        # Eğer tabloda 'notlar' kolonu yoksa hatayı yut ve notlar olmadan tekrar kaydet
+        print(f"[NOTLAR KOLONU HATASI, NOTSUZ DENENİYOR]: {insert_err}")
+        try:
+            payload.pop("notlar", None)
+            supabase.table("collaboration_requests").insert(payload).execute()
+            print("[İŞBİRLİĞİ NOTSUZ OLARAK KAYDEDİLDİ]")
+        except Exception as retry_err:
+            print(f"[KRİTİK İŞBİRLİĞİ VERİTABANI HATASI]: {retry_err}")
+            return RedirectResponse(url=f"/collaborations/my?tab=bekleyen&err=db_error", status_code=303)
+
+    # 3. Bildirim Tetikleme
+    try:
         sender = supabase.table("users").select("ad_soyad").eq("id", clean_user_id).single().execute()
         s_name = sender.data.get("ad_soyad") if sender.data else "Bir meslektaşınız"
 
-        # BİLDİRİM 1: Karşı tarafa yeni işbirliği teklifi bildirimi
         send_notification(
-            user_id=clean_target_id,
+            user_id=final_target_id,
             baslik="Yeni İşbirliği Teklifi 🤝",
-            icerik=f"{s_name} adlı meslektaşınız portföyünüz için ({isbirligi_kosulu.strip()}) şartıyla işbirliği teklifi gönderdi.",
+            icerik=f"{s_name} adlı meslektaşınız portföyünüz için ({final_terms}) şartıyla işbirliği teklifi gönderdi.",
             hedef_url="/collaborations/my?tab=bekleyen"
         )
-    except Exception as e:
-        print(f"[TEKLİF İLETME HATASI]: {e}")
+    except Exception as e_notif:
+        print(f"[BİLDİRİM GÖNDERİM UYARISI]: {e_notif}")
 
-    return RedirectResponse(url="/collaborations/my?tab=bekleyen", status_code=303)
-
-@router.post("/accept/{collab_id}")
-def post_accept_collaboration(collab_id: str, user_id: str = Cookie(None)):
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
-
-    clean_user_id = str(user_id).strip()
-    try:
-        c_res = supabase.table("collaboration_requests").select("talep_gonderen_id").eq("id", collab_id).single().execute()
-        supabase.table("collaboration_requests").update({"durum": "Aktif"}).eq("id", collab_id).eq("talep_alan_id", clean_user_id).execute()
-
-        user_info = supabase.table("users").select("ad_soyad").eq("id", clean_user_id).single().execute()
-        acceptor_name = user_info.data.get("ad_soyad") if user_info.data else "Meslektaşınız"
-
-        # BİLDİRİM 2: Teklifi gönderene kabul edildi bildirimi
-        if c_res.data and c_res.data.get("talep_gonderen_id"):
-            send_notification(
-                user_id=c_res.data.get("talep_gonderen_id"),
-                baslik="İşbirliği Teklifiniz Kabul Edildi! 🎉",
-                icerik=f"{acceptor_name} adlı meslektaşınız işbirliği teklifinizi kabul etti. Artık birlikte satış yürütebilirsiniz.",
-                hedef_url=f"/collaborations/detail/{collab_id}"
-            )
-    except Exception as e:
-        print(f"[KABUL HATASI]: {e}")
-
-    return RedirectResponse(url="/collaborations/my?tab=aktif", status_code=303)
-
-@router.post("/reject/{collab_id}")
-def post_reject_collaboration(collab_id: str, user_id: str = Cookie(None)):
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
-
-    clean_user_id = str(user_id).strip()
-    try:
-        c_res = supabase.table("collaboration_requests").select("talep_gonderen_id").eq("id", collab_id).single().execute()
-        supabase.table("collaboration_requests").update({"durum": "Reddedildi"}).eq("id", collab_id).eq("talep_alan_id", clean_user_id).execute()
-
-        user_info = supabase.table("users").select("ad_soyad").eq("id", clean_user_id).single().execute()
-        rejector_name = user_info.data.get("ad_soyad") if user_info.data else "Meslektaşınız"
-
-        # BİLDİRİM 3: Teklifi gönderene ret bildirimi
-        if c_res.data and c_res.data.get("talep_gonderen_id"):
-            send_notification(
-                user_id=c_res.data.get("talep_gonderen_id"),
-                baslik="İşbirliği Teklifi Reddedildi",
-                icerik=f"{rejector_name} adlı meslektaşınız işbirliği teklifinizi reddetti.",
-                hedef_url="/collaborations/my?tab=tamamlanan"
-            )
-    except Exception as e:
-        print(f"[REDDETME HATASI]: {e}")
-
-    return RedirectResponse(url="/collaborations/my?tab=tamamlanan", status_code=303)
-
-@router.post("/cancel/{collab_id}")
-def post_cancel_collaboration(collab_id: str, user_id: str = Cookie(None)):
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
-
-    clean_user_id = str(user_id).strip()
-    try:
-        c_res = supabase.table("collaboration_requests").select("talep_alan_id").eq("id", collab_id).single().execute()
-        supabase.table("collaboration_requests").update({"durum": "İptal Edildi"}).eq("id", collab_id).eq("talep_gonderen_id", clean_user_id).execute()
-
-        user_info = supabase.table("users").select("ad_soyad").eq("id", clean_user_id).single().execute()
-        canceler_name = user_info.data.get("ad_soyad") if user_info.data else "Meslektaşınız"
-
-        # BİLDİRİM 4: Teklifi alan tarafa iptal bildirimi
-        if c_res.data and c_res.data.get("talep_alan_id"):
-            send_notification(
-                user_id=c_res.data.get("talep_alan_id"),
-                baslik="İşbirliği Teklifi İptal Edildi",
-                icerik=f"{canceler_name} adlı meslektaşınız göndermiş olduğu işbirliği teklifini geri çekti / iptal etti.",
-                hedef_url="/collaborations/my?tab=tamamlanan"
-            )
-    except Exception as e:
-        print(f"[İPTAL HATASI]: {e}")
-
-    return RedirectResponse(url="/collaborations/my?tab=tamamlanan", status_code=303)
-
-@router.post("/update-terms/{collab_id}")
-def post_update_terms(collab_id: str, isbirligi_kosulu: str = Form(...), user_id: str = Cookie(None)):
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
-
-    clean_user_id = str(user_id).strip()
-    new_terms = isbirligi_kosulu.strip()
-
-    try:
-        c_res = supabase.table("collaboration_requests").select("talep_alan_id").eq("id", collab_id).single().execute()
-        supabase.table("collaboration_requests").update({"isbirligi_kosulu": new_terms}).eq("id", collab_id).eq("talep_gonderen_id", clean_user_id).execute()
-
-        user_info = supabase.table("users").select("ad_soyad").eq("id", clean_user_id).single().execute()
-        updater_name = user_info.data.get("ad_soyad") if user_info.data else "Meslektaşınız"
-
-        # BİLDİRİM 5: Karşı tarafa şart güncelleme bildirimi
-        if c_res.data and c_res.data.get("talep_alan_id"):
-            send_notification(
-                user_id=c_res.data.get("talep_alan_id"),
-                baslik="İşbirliği Şartı Güncellendi ✏️",
-                icerik=f"{updater_name} adlı meslektaşınız işbirliği şartını '{new_terms}' olarak güncelledi.",
-                hedef_url="/collaborations/my?tab=bekleyen"
-            )
-    except Exception as e:
-        print(f"[ŞART GÜNCELLEME HATASI]: {e}")
-
-    return RedirectResponse(url="/collaborations/my?tab=bekleyen", status_code=303)
-
+    return RedirectResponse(url="/collaborations/my?tab=bekleyen&subtab=portfoyler", status_code=303)
 # ================= 4. ÇİFT TARAFLI SATIŞ KAPATMA ONAYI =================
 @router.post("/approve-success/{collab_id}")
 def post_approve_success(collab_id: str, user_id: str = Cookie(None)):
@@ -373,7 +314,6 @@ def post_approve_success(collab_id: str, user_id: str = Cookie(None)):
         receiver_id = str(collab.get("talep_alan_id") or "").strip()
         is_sender = (sender_id == clean_user_id)
 
-        # Karşı tarafın onayı var mı?
         other_approved = bool(
             (collab.get("talep_alan_onay") or collab.get("alan_onay"))
             if is_sender
@@ -446,7 +386,6 @@ def post_close_failed(collab_id: str, sebep: str = Form("Anlaşma Sağlanamadı"
             user_info = supabase.table("users").select("ad_soyad").eq("id", clean_user_id).single().execute()
             my_name = user_info.data.get("ad_soyad") if user_info.data else "Meslektaşınız"
 
-            # BİLDİRİM 8: Süreç başarısız kapatıldığında karşı tarafa haber verme
             send_notification(
                 user_id=other_id,
                 baslik="İşbirliği Süreci Sonlandırıldı",
